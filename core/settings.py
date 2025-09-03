@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
     'printer',
 ]
 
@@ -126,3 +127,16 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Configuração de arquivos de mídia (para uploads de usuários)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        # Autenticação básica (usuário/senha via header). Ideal para scripts e outras aplicações.
+        'rest_framework.authentication.BasicAuthentication',
+        # Autenticação via sessão (útil para testar no navegador).
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        # Exige que o usuário esteja autenticado para acessar qualquer endpoint.
+        'rest_framework.permissions.IsAuthenticated',
+    ]
+}

@@ -1,11 +1,12 @@
 # seu_projeto/urls.py
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
 from django.conf import settings # Importe
 from django.conf.urls.static import static # Importe
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/', include('printer.urls')),
 ]
 
 if settings.DEBUG:
