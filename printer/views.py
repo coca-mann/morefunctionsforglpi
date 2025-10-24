@@ -6,6 +6,13 @@ from .models import Impressora, EtiquetaLayout
 from .serializers import ImpressoraSerializer, EtiquetaLayoutListSerializer, EtiquetaLayoutUpdateSerializer, EtiquetaParaImprimirSerializer
 from .services import gerar_e_imprimir_etiquetas
 
+from django.core.management import call_command
+from django.contrib import messages
+from django.shortcuts import redirect
+from django.contrib.admin.views.decorators import staff_member_required
+import io
+from contextlib import redirect_stdout
+
 # --- Views para Impressoras ---
 
 @api_view(['GET'])
@@ -100,3 +107,35 @@ def imprimir_etiquetas_api(request):
     else:
         # Erro interno do servidor (ex: impressora offline, layout não encontrado)
         return Response({'status': 'erro', 'mensagem': mensagem}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@staff_member_required
+def rodar_sincronizacao_impressoras(request):
+    """
+    Uma view de admin que executa o comando 'sincronizar_impressoras'
+    e redireciona o usuário de volta para o admin.
+    """
+    
+    # Usamos 'io.StringIO' para capturar qualquer saída do comando (prints, etc.)
+    # e exibi-la como uma mensagem, o que é útil para feedback.
+    f = io.StringIO()
+    
+    try:
+        # 'redirect_stdout(f)' captura a saída do console
+        with redirect_stdout(f):
+            # Chama o seu comando pelo nome
+            call_command('sincronizar_impressoras')
+        
+        output = f.getvalue()
+        if output:
+             messages.success(request, f'Sincronização concluída com sucesso! Saída: {output}')
+        else:
+             messages.success(request, 'Sincronização de impressoras concluída com sucesso!')
+
+    except Exception as e:
+        # Se o comando falhar, captura a exceção e mostra como erro
+        messages.error(request, f'Erro ao executar a sincronização: {e}')
+    
+    # Redireciona o usuário de volta para a página principal do admin
+    # Você pode mudar 'admin:index' para outra página se preferir
+    return redirect('admin:index')

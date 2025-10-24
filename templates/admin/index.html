@@ -1,0 +1,29 @@
+{% extends "admin/index.html" %}
+{% load i18n %}
+
+{# Este bloco adiciona um novo "card" no dashboard do admin #}
+{% block content %}
+  {{ block.super }} {# Mantém todo o conteúdo original do dashboard #}
+
+  <div class="app-list-module module">
+    <table>
+      <caption>
+        <a href="#" class="section" title="Ações customizadas">{% translate 'Ações Customizadas' %}</a>
+      </caption>
+      <tbody>
+        <tr class="model-group">
+          <th scope="row">
+            {# Este é o nosso botão! #}
+            {# Ele usa o 'name' que definimos na URL (Passo 2) #}
+            <a href="{% url 'sincronizar_impressoras' %}">
+              Sincronizar Impressoras
+            </a>
+          </th>
+          <td>
+            Clique para iniciar a sincronização manual das impressoras.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+{% endblock %}
