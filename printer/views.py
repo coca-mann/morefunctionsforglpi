@@ -1,6 +1,7 @@
 from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 
 from .models import Impressora, EtiquetaLayout
 from .serializers import ImpressoraSerializer, EtiquetaLayoutListSerializer, EtiquetaLayoutUpdateSerializer, EtiquetaParaImprimirSerializer
@@ -16,6 +17,7 @@ from contextlib import redirect_stdout
 # --- Views para Impressoras ---
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def listar_impressoras_api(request):
     """
     Retorna uma lista de todas as impressoras cadastradas no sistema.
@@ -25,6 +27,7 @@ def listar_impressoras_api(request):
     return Response(serializer.data)
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def selecionar_impressora_padrao_api(request, pk):
     """
     Recebe o ID (pk) de uma impressora e a define como padrão.
@@ -40,6 +43,7 @@ def selecionar_impressora_padrao_api(request, pk):
 # --- Views para Layouts ---
 
 @api_view(['GET', 'PUT', 'PATCH'])
+@permission_classes([IsAuthenticated])
 def detalhe_layout_api(request, pk):
     """
     Recupera, atualiza ou atualiza parcialmente um layout de etiqueta.
@@ -64,6 +68,7 @@ def detalhe_layout_api(request, pk):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def listar_layouts_api(request):
     """
     Retorna uma lista de todos os layouts de etiqueta cadastrados.
@@ -74,6 +79,7 @@ def listar_layouts_api(request):
     return Response(serializer.data)
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def selecionar_layout_padrao_api(request, pk):
     """
     Recebe o ID (pk) de um layout e o define como padrão.
@@ -89,6 +95,7 @@ def selecionar_layout_padrao_api(request, pk):
 # --- View para Impressão ---
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def imprimir_etiquetas_api(request):
     """
     Recebe uma lista de objetos com 'titulo' e 'url' e os envia para impressão.
