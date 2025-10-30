@@ -1,0 +1,6 @@
+1. criar app para comunicação com API v2 do GLPI
+
+2. criar painel de acompanhamento dos chamados, trazendo: código, entidade, título, data abertura, técnico/grupo atribuído, status, urgência
+   filtrado por data abertura, urgencia
+
+3. criar painel para impressão de etiquetas
