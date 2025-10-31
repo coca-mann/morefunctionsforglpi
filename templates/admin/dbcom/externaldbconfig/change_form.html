@@ -1,0 +1,111 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls %}
+
+{# Bloco para adicionar o resultado do teste #}
+{% block content %}
+    {{ block.super }} {# Renderiza o formulário padrão #}
+
+    {# Div para mostrar o resultado do teste #}
+    <div id="test-connection-result" style="
+        margin: 10px 0;
+        padding: 12px;
+        border-radius: 4px;
+        display: none; /* Começa escondido */
+        font-weight: bold;
+        font-size: 14px;
+        border-width: 1px;
+        border-style: solid;
+    "></div>
+{% endblock %}
+
+
+{# Bloco para adicionar o botão antes dos botões de salvar #}
+{% block submit_buttons_bottom %}
+    <div class="submit-row">
+        <button type="button" id="test-connection-btn" class="button">Testar Conexão</button>
+    </div>
+    
+    {# Renderiza os botões de salvar padrões (Salvar, Salvar e continuar, etc.) #}
+    {{ block.super }}
+{% endblock %}
+
+
+{# Bloco para adicionar nosso JavaScript #}
+{% block admin_change_form_document_ready %}
+{{ block.super }}
+<script>
+(function($) {
+    'use strict';
+    
+    // Quando o botão de teste é clicado
+    $('#test-connection-btn').on('click', function(e) {
+        e.preventDefault();
+        
+        var $btn = $(this);
+        var $resultDiv = $('#test-connection-result');
+        
+        // Estado de "Carregando"
+        $btn.text('Testando...');
+        $btn.prop('disabled', true);
+        $resultDiv.hide().removeClass('success error');
+        
+        // 1. Coletar dados dos campos do formulário
+        var data = {
+            host: $('#id_host').val(),
+            port: $('#id_porta').val(),
+            database: $('#id_database').val(),
+            user: $('#id_user').val(),
+            password: $('#id_password_input').val()
+        };
+        
+        // 2. Pegar a URL da view de teste (CORRIGIDA)
+        // O nome da URL agora é "admin:app_label_model_name_test_connection"
+        var testUrl = '{% url "admin:dbcom_externaldbconfig_test_connection" %}';
+        
+        // 3. Fazer a requisição AJAX (POST)
+        $.ajax({
+            url: testUrl,
+            type: 'POST',
+            data: JSON.stringify(data),
+            contentType: 'application/json',
+            beforeSend: function(xhr, settings) {
+                xhr.setRequestHeader("X-CSRFToken", '{{ csrf_token }}');
+            },
+            
+            // 4. Lidar com o sucesso
+            success: function(response) {
+                $resultDiv.text(response.message);
+                $resultDiv.css({
+                    'background-color': '#dff0d8',
+                    'border-color': '#d6e9c6',
+                    'color': '#3c763d'
+                });
+                $resultDiv.show();
+            },
+            
+            // 5. Lidar com o erro
+            error: function(xhr) {
+                var message = 'Erro desconhecido.';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    message = xhr.responseJSON.message;
+                }
+                $resultDiv.text(message);
+                $resultDiv.css({
+                    'background-color': '#f2dede',
+                    'border-color': '#ebccd1',
+                    'color': '#a94442'
+                });
+                $resultDiv.show();
+            },
+            
+            // 6. Reativar o botão
+            complete: function() {
+                $btn.text('Testar Conexão');
+                $btn.prop('disabled', false);
+            }
+        });
+    });
+
+})(django.jQuery);
+</script>
+{% endblock %}
