@@ -25,7 +25,7 @@
 <body class="bg-blue-400 font-sans">
 
     <!-- Container principal agora ocupa toda a tela -->
-    <div class="min-h-screen p-4 md:p-8">
+    <div class="min-h-screen p-2">
         <div class="flex justify-between items-center mb-4">
             <!-- Título maior para melhor visualização -->
             <h1 class="text-6xl font-bold text-gray-800">Painel de Tickets</h1>
@@ -129,7 +129,7 @@
                     tr.innerHTML = `
                         <td class="px-4 py-3 whitespace-nowrap text-xl font-medium text-gray-900">${row.id}</td>
                         <td class="px-4 py-3 whitespace-nowrap text-xl text-gray-700">${row.Entidade || 'N/A'}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-xl text-gray-700 max-w-xs truncate" title="${row.Titulo}">${row.Titulo || ''}</td>
+                        <td class="px-4 py-3 text-xl text-gray-700" title="${row.Titulo}">${row.Titulo || ''}</td>
                         <td class="px-4 py-3 whitespace-nowrap text-xl text-gray-700">${row.Abertura || 'N/A'}</td>
                         <td class="px-4 py-3 whitespace-nowrap text-xl text-gray-700">${row.Status || 'N/A'}</td>
                         <td class="px-4 py-3 whitespace-nowrap text-xl text-gray-700">${row.Urgencia || 'N/A'}</td>
