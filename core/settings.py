@@ -45,7 +45,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'printer',
     'apps.panel',
-    'apps.apicom',
+    'apps.dbcom',
 ]
 
 MIDDLEWARE = [

@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
 
-class ApicomConfig(AppConfig):
+class DbcomConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'apps.apicom'
+    name = 'apps.dbcom'
