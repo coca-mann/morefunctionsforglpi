@@ -1,0 +1,165 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Tickets GLPI</title>
+    <!-- Carrega o Tailwind CSS para estilo minimalista -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* CSS para o spinner de carregamento */
+        .spinner {
+            border-top-color: #3498db;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        /* Garante que a fonte Inter (padrão do Tailwind) seja usada, ótima para telas */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-blue-400 font-sans">
+
+    <!-- Container principal agora ocupa toda a tela -->
+    <div class="min-h-screen p-4 md:p-8">
+        <div class="flex justify-between items-center mb-4">
+            <!-- Título maior para melhor visualização -->
+            <h1 class="text-6xl font-bold text-gray-800">Painel de Tickets</h1>
+            
+            <!-- Grupo da direita: Relógio e Spinner -->
+            <div class="flex items-center space-x-4">
+                <!-- Relógio maior -->
+                <div id="live-clock" class="text-6xl font-semibold text-gray-700" title="Hora atual">
+                    --:--:--
+                </div>
+                <!-- Spinner de carregamento, começa escondido -->
+                <div id="loading-spinner" class="spinner w-8 h-8 rounded-full border-4 border-gray-300 hidden"></div>
+            </div>
+        </div>
+
+        <!-- Container da tabela com bordas e sombra -->
+        <div class="bg-white shadow-md rounded-lg overflow-hidden">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <!-- Cabeçalhos de tabela maiores (agora text-lg) -->
+                        <th class="px-4 py-3 text-left text-lg font-medium text-gray-600 uppercase tracking-wider">ID</th>
+                        <th class="px-4 py-3 text-left text-lg font-medium text-gray-600 uppercase tracking-wider">Entidade</th>
+                        <th class="px-4 py-3 text-left text-lg font-medium text-gray-600 uppercase tracking-wider">Titulo</th>
+                        <th class="px-4 py-3 text-left text-lg font-medium text-gray-600 uppercase tracking-wider">Abertura</th>
+                        <th class="px-4 py-3 text-left text-lg font-medium text-gray-600 uppercase tracking-wider">Status</th>
+                        <th class="px-4 py-3 text-left text-lg font-medium text-gray-600 uppercase tracking-wider">Urgência</th>
+                        <th class="px-4 py-3 text-left text-lg font-medium text-gray-600 uppercase tracking-wider">Solicitante</th>
+                        <th class="px-4 py-3 text-left text-lg font-medium text-gray-600 uppercase tracking-wider">Técnico</th>
+                    </tr>
+                </thead>
+                <!-- Corpo da tabela será preenchido pelo JavaScript -->
+                <tbody id="ticket-table-body" class="bg-white divide-y divide-gray-200">
+                    <!-- Linhas da tabela aparecerão aqui -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // URLs do Django
+        const dataUrl = "{% url 'api_painel_data' %}";
+
+        // Elementos do DOM
+        const tableBody = document.getElementById('ticket-table-body');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const clockElement = document.getElementById('live-clock'); // Elemento do relógio
+
+        // --- Lógica do Relógio ---
+        
+        /**
+         * Atualiza o relógio digital a cada segundo
+         */
+        function updateClock() {
+            const now = new Date();
+            // Formata para o padrão Brasil (ex: 14:35:02)
+            const timeString = now.toLocaleTimeString('pt-BR', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            if (clockElement) {
+                clockElement.textContent = timeString;
+            }
+        }
+
+        // --- Lógica Principal ---
+
+        /**
+         * Busca os dados da API e atualiza a tabela
+         */
+        async function fetchAndUpdateTable() {
+            loadingSpinner.classList.remove('hidden'); // Mostra o spinner
+
+            try {
+                const response = await fetch(dataUrl);
+                if (!response.ok) {
+                    throw new Error(`Erro na API: ${response.statusText}`);
+                }
+                const result = await response.json();
+                
+                if (result.error) {
+                    throw new Error(`Erro retornado pela API: ${result.error}`);
+                }
+
+                const data = result.data;
+
+                // Limpa a tabela
+                tableBody.innerHTML = '';
+
+                // Preenche a tabela com os novos dados
+                data.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-gray-50';
+                    
+                    // NOTA: Os nomes das propriedades (row.ID, row.Urgência) 
+                    // devem ser EXATAMENTE iguais aos nomes retornados pela
+                    // sua query SQL (ex: SELECT t.id AS ID, ...).
+                    
+                    // Fontes do corpo da tabela maiores (text-base)
+                    tr.innerHTML = `
+                        <td class="px-4 py-3 whitespace-nowrap text-xl font-medium text-gray-900">${row.id}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-xl text-gray-700">${row.Entidade || 'N/A'}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-xl text-gray-700 max-w-xs truncate" title="${row.Titulo}">${row.Titulo || ''}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-xl text-gray-700">${row.Abertura || 'N/A'}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-xl text-gray-700">${row.Status || 'N/A'}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-xl text-gray-700">${row.Urgencia || 'N/A'}</td>
+                        <td classid="px-4 py-3 whitespace-nowrap text-xl text-gray-700">${row.Solicitante || 'N/A'}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-xl text-gray-700">${row.Tecnico || 'N/A'}</td>
+                    `;
+                    tableBody.appendChild(tr);
+                });
+
+            } catch (error) {
+                console.error("Falha ao buscar dados:", error);
+                tableBody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-red-500 text-base">Falha ao carregar dados.</td></tr>';
+            } finally {
+                loadingSpinner.classList.add('hidden'); // Esconde o spinner
+            }
+        }
+
+        // --- Inicialização ---
+
+        // 1. Inicia e atualiza o relógio a cada segundo
+        updateClock(); // Chama imediatamente para não piscar
+        setInterval(updateClock, 1000); // Atualiza a cada segundo
+
+        // 2. Carrega os dados da tabela imediatamente ao abrir a página
+        fetchAndUpdateTable();
+
+        // 3. Define o intervalo de atualização da tabela (30000 ms = 30 segundos)
+        setInterval(fetchAndUpdateTable, 15000);
+
+    </script>
+</body>
+</html>
+
