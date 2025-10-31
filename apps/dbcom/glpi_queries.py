@@ -25,6 +25,8 @@ def get_panel_data():
             WHEN gt.status = 2 THEN 'Em atendimento'
             WHEN gt.status = 3 THEN 'Em atendimento (planejado)'
             WHEN gt.status = 4 THEN 'Pendente'
+            WHEN gt.status = 5 THEN 'Solucionado'
+            WHEN gt.status = 10 THEN 'Aprovação'
         END AS 'Status',
         CASE
             WHEN gt.urgency = 1 THEN 'Muito baixa'
@@ -42,17 +44,17 @@ def get_panel_data():
         ) AS 'Solicitante',
         GROUP_CONCAT(
             DISTINCT CASE
-                WHEN gtu.`type` = 2 THEN CONCAT_WS(' ', gu.firstname, gu.realname)
+                WHEN gtu.`type` = 2 THEN gu.firstname
                 ELSE NULL
             END
-            SEPARATOR ', '
-        ) AS 'Tecnico'
+        ) AS 'Tecnico',
+        gt.status AS 'idstatus'
         FROM glpi_tickets AS gt
         LEFT JOIN glpi_entities AS ge ON ge.id = gt.entities_id
         LEFT JOIN glpi_tickets_users AS gtu ON gtu.tickets_id = gt.id -- Join de usuários (1 vez)
         LEFT JOIN glpi_users AS gu ON gu.id = gtu.users_id -- Join de nomes (1 vez)
         WHERE
-            gt.status NOT IN (5, 6)
+            gt.status NOT IN (6)
             AND gt.is_deleted = 0
         GROUP BY
             gt.id,
@@ -60,7 +62,15 @@ def get_panel_data():
             gt.`date`,
             gt.status,
             gt.urgency
-        ORDER BY gt.urgency DESC, gt.status ASC
+        ORDER BY CASE gt.status
+            WHEN 1  THEN 1  -- Primeira prioridade
+            WHEN 2  THEN 2  -- Segunda prioridade
+            WHEN 3  THEN 3  -- Terceira prioridade
+            WHEN 4 THEN 4  -- Quarta prioridade
+            WHEN 10  THEN 5  -- Quinta prioridade
+            WHEN 5  THEN 6  -- Sexta prioridade
+            ELSE 999        -- Joga qualquer outro status (como o 4) para o final
+        END ASC, gt.urgency DESC
     """
     
     return db_glpi.fetch_query(sql)
