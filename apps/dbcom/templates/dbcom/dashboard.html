@@ -1,164 +1,382 @@
-{% load static %}
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel de Tickets GLPI</title>
-    <!-- Carrega o Tailwind CSS para estilo minimalista -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Painel de Tickets - TI</title>
+    <link href="https://cdn.tailwindcss.com" rel="stylesheet">
+    <!-- Adicionar Font Awesome para ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* CSS para o spinner de carregamento */
-        .spinner {
-            border-top-color: #3498db;
-            animation: spin 1s linear infinite;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        /* Garante que a fonte Inter (padrão do Tailwind) seja usada, ótima para telas */
+
         body {
-            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1a1f3a 100%);
+            color: #e2e8f0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* Table Styles */
+        .table-row {
+            display: grid;
+            grid-template-columns: 160px 120px 160px 1.5fr 200px 180px 180px 140px;
+            gap: 12px;
+            padding: 20px 20px;
+            align-items: center;
+            border-bottom: 1px solid #334155;
+            font-size: 24px;
+            line-height: 1.4;
+            transition: all 0.3s ease;
+        }
+
+        .table-row:hover {
+            background: rgba(71, 85, 105, 0.3);
+        }
+
+        .table-header {
+            display: grid;
+            grid-template-columns: 160px 120px 160px 1.5fr 200px 180px 180px 140px;
+            gap: 12px;
+            padding: 20px;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border-bottom: 2px solid #0ea5e9;
+            font-weight: bold;
+            font-size: 20px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .header-cell {
+            color: #0ea5e9;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 22px;
+        }
+
+        /* Header container com flexbox correto */
+        #header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: nowrap;
+            width: 100%;
+        }
+
+        #counters-left {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+            flex-wrap: nowrap;
+        }
+
+        .counter-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            white-space: nowrap;
+        }
+
+        .counter-icon {
+            font-size: 36px;
+            color: #0ea5e9;
+        }
+
+        .counter-number {
+            font-size: 42px;
+            font-weight: bold;
+            color: #0ea5e9;
+            line-height: 1;
+        }
+
+        /* Clock */
+        #clock {
+            font-size: 56px;
+            font-weight: bold;
+            color: #0ea5e9;
+            font-variant-numeric: tabular-nums;
+            font-family: 'Monaco', 'Menlo', monospace;
+            white-space: nowrap;
+        }
+
+        /* Scroll */
+        .tickets-scroll {
+            height: calc(100vh - 140px);
+            overflow-y: auto;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+
+        .tickets-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .tickets-scroll::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+
+        .tickets-scroll::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+
+        .tickets-scroll::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+
+        /* Urgency badge styles using custom colors */
+        .urgency-badge {
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            display: inline-block;
+            width: 100%;
+        }
+
+        /* Atualizar estilos de urgência para bordas com fundo transparente */
+        .urgency-badge.bg-\[\#693AB6\] {
+            background-color: transparent !important;
+            color: #693AB6 !important;
+            border: 2px solid #693AB6 !important;
+        }
+
+        .urgency-badge.bg-\[\#EA4C3C\] {
+            background-color: transparent !important;
+            color: #EA4C3C !important;
+            border: 2px solid #EA4C3C !important;
+        }
+
+        .urgency-badge.bg-\[\#F79B1E\] {
+            background-color: transparent !important;
+            color: #F79B1E !important;
+            border: 2px solid #F79B1E !important;
+        }
+
+        .urgency-badge.bg-\[\#FBEC47\] {
+            background-color: transparent !important;
+            color: #FBEC47 !important;
+            border: 2px solid #FBEC47 !important;
+        }
+
+        .urgency-badge.bg-\[\#57AE52\] {
+            background-color: transparent !important;
+            color: #57AE52 !important;
+            border: 2px solid #57AE52 !important;
+        }
+
+        /* Adicionar estilo para card de status */
+        .status-badge {
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-size: 18px;
+            font-weight: 600;
+            text-align: center;
+            display: inline-block;
+            width: 100%;
+            color: white;
+        }
+
+        /* Ajustar cores dos status conforme especificação */
+        .status-badge.bg-blue-600 {
+            background-color: #22c55e !important;
+            color: white !important;
+            border: none;
+        }
+
+        .status-badge.bg-orange-500 {
+            background-color: transparent !important;
+            color: #22c55e !important;
+            border: 2px solid #22c55e !important;
+        }
+
+        .status-badge.bg-purple-600 {
+            background-color: transparent !important;
+            color: #3b82f6 !important;
+            border: 2px solid #3b82f6 !important;
+        }
+
+        .status-badge.bg-yellow-500 {
+            background-color: #f97316 !important;
+            color: white !important;
+            border: none;
+        }
+
+        .status-badge.bg-green-500 {
+            background-color: #000000 !important;
+            color: #ffffff !important;
+            border: none;
+        }
+
+        .status-badge.bg-cyan-500 {
+            background-color: #9333ea !important;
+            color: white !important;
+            border: none;
+        }
+
+        /* Truncate text */
+        .truncate-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .truncate-1 {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Adicionar classes para centralizar colunas específicas */
+        .centered-column {
+            text-align: center;
         }
     </style>
 </head>
-<body class="bg-blue-300 font-sans">
-
-    <!-- Container principal agora ocupa toda a tela -->
-    <div class="min-h-screen p-2">
-        <div class="flex justify-between items-center mb-4">
-            <!-- Título maior para melhor visualização -->
-            <h1 class="text-6xl font-bold text-white">Painel de Tickets</h1>
-            
-            <!-- Grupo da direita: Relógio e Spinner -->
-            <div class="flex items-center space-x-4">
-                <!-- Spinner de carregamento, começa escondido -->
-                <div id="loading-spinner" class="spinner w-8 h-8 rounded-full border-4 border-gray-900 hidden"></div>
-                <!-- Relógio maior -->
-                <div id="live-clock" class="text-6xl font-semibold text-white" title="Hora atual">
-                    --:--:--
+<body>
+    <div class="flex flex-col h-screen">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-slate-900 to-slate-800 border-b-2 border-cyan-500 px-8 py-4">
+            <!-- Usar estrutura flexbox correta para manter itens lado a lado -->
+            <div id="header-top">
+                <!-- Contadores à esquerda -->
+                <div id="counters-left">
+                    <div class="counter-item">
+                        <i class="fas fa-check counter-icon"></i>
+                        <div class="counter-number" id="resolved-today">0</div>
+                    </div>
+                    
+                    <div class="counter-item">
+                        <i class="fas fa-plus counter-icon"></i>
+                        <div class="counter-number" id="registered-today">0</div>
+                    </div>
                 </div>
-                
+
+                <!-- Relógio à direita -->
+                <div id="clock">00:00:00</div>
             </div>
         </div>
 
-        <!-- Container da tabela com bordas e sombra -->
-        <div class="bg-white shadow-md rounded-lg overflow-hidden">
-            <table class="min-w-full">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <!-- Cabeçalhos de tabela maiores (agora text-lg) -->
-                        <th class="px-4 py-3 text-left text-3xl font-medium text-gray-900 uppercase tracking-wider">ID</th>
-                        <th class="px-4 py-3 text-left text-3xl font-medium text-gray-900 uppercase tracking-wider">Abertura</th>
-                        <th class="px-4 py-3 text-left text-3xl font-medium text-gray-900 uppercase tracking-wider">Entidade</th>
-                        <th class="px-4 py-3 text-left text-3xl font-medium text-gray-900 uppercase tracking-wider">Titulo</th>
-                        <th class="px-4 py-3 text-left text-3xl font-medium text-gray-900 uppercase tracking-wider">Status</th>
-                        <th class="px-4 py-3 text-left text-3xl font-medium text-gray-900 uppercase tracking-wider">Solicitante</th>
-                        <th class="px-4 py-3 text-left text-3xl font-medium text-gray-900 uppercase tracking-wider">Técnico</th>
-                        <th class="px-4 py-3 text-left text-3xl font-medium text-gray-900 uppercase tracking-wider">Urgência</th>
-                    </tr>
-                </thead>
-                <!-- Corpo da tabela será preenchido pelo JavaScript -->
-                <!-- NOTA: Removido 'divide-y divide-gray-200' para permitir estilos de borda por linha -->
-                <tbody id="ticket-table-body" class="bg-white">
-                    <!-- Linhas da tabela aparecerão aqui -->
-                </tbody>
-            </table>
+        <!-- Table Header -->
+        <div class="table-header">
+            <div class="header-cell centered-column">ID</div>
+            <div class="header-cell centered-column">Abertura</div>
+            <div class="header-cell centered-column">Entidade</div>
+            <div class="header-cell">Título</div>
+            <div class="header-cell centered-column">Status</div>
+            <div class="header-cell centered-column">Solicitante</div>
+            <div class="header-cell centered-column">Atendente</div>
+            <div class="header-cell centered-column">Urgência</div>
+        </div>
+
+        <!-- Removido HTML de dados mocados, agora será renderizado via JavaScript -->
+        <div class="tickets-scroll" id="tickets-container">
+            <!-- Rows will be inserted here by JavaScript -->
         </div>
     </div>
 
     <script>
-        // URLs do Django
         const dataUrl = "{% url 'api_painel_data' %}";
 
-        // Elementos do DOM
-        const tableBody = document.getElementById('ticket-table-body');
-        const loadingSpinner = document.getElementById('loading-spinner');
-        const clockElement = document.getElementById('live-clock'); // Elemento do relógio
-
-        // --- Lógica do Relógio ---
-        
-        /**
-         * Atualiza o relógio digital a cada segundo
-         */
-        function updateClock() {
-            const now = new Date();
-            // Formata para o padrão Brasil (ex: 14:35:02)
-            const timeString = now.toLocaleTimeString('pt-BR', {
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
-            if (clockElement) {
-                clockElement.textContent = timeString;
-            }
+        function getStatusClass(statusId) {
+            const statusColorMap = {
+                1: 'bg-blue-600',           // Novo - azul mais vibrante
+                2: 'bg-orange-500',         // Em atendimento
+                3: 'bg-purple-600',         // Em atendimento (planejado) - roxo mais vibrante
+                4: 'bg-yellow-500',         // Pendente - amarelo
+                5: 'bg-green-500',          // Solucionado
+                10: 'bg-cyan-500'           // Aprovação
+            };
+            return statusColorMap[statusId] || 'bg-slate-600';
         }
 
-        // --- Funções de Estilização ---
+        function getUrgencyClasses(urgencyText) {
+            if (!urgencyText) return 'bg-gray-200 text-gray-800';
 
-        /**
-         * Retorna as classes do Tailwind para a linha (TR) com base no idstatus.
-         * (Versão atualizada por você)
-         */
-        function getRowClasses(statusId) {
-            // Classe base para a borda inferior, substituindo o 'divide-y'
-            const baseClasses = 'border-b border-gray-200';
-            
-            switch (statusId) {
-                case 1:
-                    // idstatus 1 = fundo verde claro preenchido
-                    return `${baseClasses} bg-green-500 text-white`;
-                case 2:
-                    // idstatus 2 = fundo branco e bordas da linha inteira pintadas de verde
-                    // (Usando borda lateral grossa para melhor visualização)
-                    return `${baseClasses} bg-green-100 border-l-8 border-green-500`;
-                case 3:
-                    // idstatus 3 = fundo branco e bordas azul
-                    return `${baseClasses} bg-white border-l-8 border-sky-500`;
-                case 4:
-                    // idstatus 4 = fundo laranja claro preenchido
-                    return `${baseClasses} bg-orange-200 border-l-8 border-orange-500`;
-                case 5:
-                    // idstatus 5 = fundo cinza claro preenchido com bordas em preto
-                    return `${baseClasses} bg-gray-100 border-l-8 border-black`;
-                case 10:
-                    // idstatus 5 = fundo cinza claro preenchido com bordas em preto
-                    return `${baseClasses} bg-teal-100 border-l-8 border-teal-500`;
-                default:
-                    // Estilo padrão
-                    return `${baseClasses} bg-white`;
-            }
-        }
-
-        /**
-         * Retorna o HTML para a "caixa" de Urgência com base no texto.
-         * (Adicionado novamente)
-         */
-         function getUrgencyClasses(urgencyText) {
-            if (!urgencyText) return 'bg-gray-200 text-gray-800'; // Padrão
-
-            // Mapeia o texto da urgência para as classes de estilo (cor de fundo e texto)
             const styles = {
                 'Muito alta': 'bg-[#693AB6] text-white',
                 'Alta': 'bg-[#EA4C3C] text-white',
-                'Média': 'bg-[#F79B1E] text-gray-900', // Laranja com texto escuro
-                'Baixa': 'bg-[#FBEC47] text-gray-900', // Amarelo com texto escuro
+                'Média': 'bg-[#F79B1E] text-gray-900',
+                'Baixa': 'bg-[#FBEC47] text-gray-900',
                 'Muito baixa': 'bg-[#57AE52] text-white'
             };
 
-            // Pega o estilo ou usa um padrão
             return styles[urgencyText] || 'bg-gray-200 text-gray-800';
         }
 
+        function getRowClasses(statusId) {
+            const colorClass = getStatusClass(statusId);
+            return `${colorClass} text-white`;
+        }
 
-        // --- Lógica Principal ---
+        function renderTickets(tickets) {
+            const container = document.getElementById('tickets-container');
+            container.innerHTML = '';
 
-        /**
-         * Busca os dados da API e atualiza a tabela
-         */
+            tickets.forEach(ticket => {
+                const row = document.createElement('div');
+                row.className = `table-row ${getRowClasses(ticket.idstatus)}`;
+                
+                const urgencyClasses = getUrgencyClasses(ticket.Urgencia);
+                const statusColorClass = getStatusClass(ticket.idstatus);
+
+                row.innerHTML = `
+                    <div class="truncate-1 centered-column">${ticket.id}</div>
+                    <div class="abertura-cell centered-column">
+                        <div class="abertura-data">${ticket.Abertura ? ticket.Abertura.split(' ')[0] : '-'}</div>
+                        <div class="abertura-hora">${ticket.Abertura ? ticket.Abertura.split(' ')[1] : '-'}</div>
+                    </div>
+                    <div class="truncate-1 centered-column">${ticket.Entidade}</div>
+                    <div class="truncate-2">${ticket.Titulo}</div>
+                    <div class="status-badge ${statusColorClass}">${ticket.Status}</div>
+                    <div class="truncate-1">${ticket.Solicitante}</div>
+                    <div class="truncate-1 centered-column">${ticket.Tecnico || '-'}</div>
+                    <div class="urgency-badge ${urgencyClasses}">${ticket.Urgencia}</div>
+                `;
+                
+                container.appendChild(row);
+            });
+        }
+
+        function updateCounters(tickets) {
+            const today = new Date();
+            const todayDateString = String(today.getDate()).padStart(2, '0') + '/' + 
+                                    String(today.getMonth() + 1).padStart(2, '0') + '/' + 
+                                    today.getFullYear();
+
+            // Contar tickets resolvidos hoje (statusid === 5)
+            const resolved = tickets.filter(t => {
+                return t.idstatus === 5 && t.Abertura.includes(todayDateString);
+            }).length;
+            
+            // Contar tickets registrados hoje
+            const registered = tickets.filter(t => {
+                return t.Abertura.includes(todayDateString);
+            }).length;
+            
+            document.getElementById('resolved-today').textContent = resolved;
+            document.getElementById('registered-today').textContent = registered;
+        }
+
+        // Atualizar relógio
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
+        }
+
         async function fetchAndUpdateTable() {
-            loadingSpinner.classList.remove('hidden'); // Mostra o spinner
-
             try {
                 const response = await fetch(dataUrl);
                 if (!response.ok) {
@@ -170,59 +388,34 @@
                     throw new Error(`Erro retornado pela API: ${result.error}`);
                 }
 
-                const data = result.data;
+                const data = result.data || result;
+                console.log("[v0] Dados recebidos:", data);
 
-                // Limpa a tabela
-                tableBody.innerHTML = '';
-
-                // Preenche a tabela com os novos dados
-                data.forEach(row => {
-                    const tr = document.createElement('tr');
-                    
-                    // Define as classes da linha com base no idstatus
-                    tr.className = getRowClasses(row.idstatus); 
-                    
-                    // NOTA: Os nomes das propriedades (row.id, row.Titulo) 
-                    // devem ser EXATAMENTE iguais aos nomes retornados pela
-                    // sua query SQL (ex: SELECT t.id AS id, ...).
-                    
-                    // Fontes do corpo da tabela maiores (text-base)
-                    tr.innerHTML = `
-                        <td class="px-4 py-5 whitespace-nowrap text-2xl text-gray-900 font-medium">${row.id}</td>
-                        <td class="px-4 py-5 text-3xl text-center text-gray-900 font-medium">${(row.Abertura || '').replace(' ', '<br>')}</td>
-                        <td class="px-4 py-5 whitespace-nowrap text-2xl text-gray-900 font-medium">${row.Entidade || ''}</td>
-                        <td class="px-4 py-5 text-2xl text-gray-900 font-medium" title="${row.Titulo}">${row.Titulo || ''}</td>
-                        <td class="px-4 py-5 whitespace-nowrap text-2xl text-gray-900 font-medium">${row.Status || ''}</td>
-                        <td class="px-4 py-5 whitespace-nowrap text-2xl text-gray-900 font-medium">${row.Solicitante || ''}</td>
-                        <td class="px-4 py-5 whitespace-nowrap text-2xl text-gray-900 font-medium">${row.Tecnico || ''}</td>
-                        <td class="px-4 py-5 whitespace-nowrap text-3xl text-center font-semibold ${getUrgencyClasses(row.Urgencia)}">
-                            ${row.Urgencia || ''}
-                        </td>
-                    `;
-                    tableBody.appendChild(tr);
-                });
+                // Renderiza os tickets e atualiza contadores
+                renderTickets(data);
+                updateCounters(data);
 
             } catch (error) {
                 console.error("Falha ao buscar dados:", error);
-                tableBody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-red-500 text-base">Falha ao carregar dados.</td></tr>';
-            } finally {
-                loadingSpinner.classList.add('hidden'); // Esconde o spinner
+                document.getElementById('tickets-container').innerHTML = 
+                    '<div style="padding: 20px; color: #ef4444; font-size: 18px;">Falha ao carregar dados. Tentando novamente...</div>';
             }
         }
 
-        // --- Inicialização ---
-
-        // 1. Inicia e atualiza o relógio a cada segundo
-        updateClock(); // Chama imediatamente para não piscar
-        setInterval(updateClock, 1000); // Atualiza a cada segundo
-
-        // 2. Carrega os dados da tabela imediatamente ao abrir a página
+        // Iniciar atualizações
+        updateClock();
         fetchAndUpdateTable();
+        
+        setInterval(updateClock, 1000);
+        setInterval(fetchAndUpdateTable, 10000);
 
-        // 3. Define o intervalo de atualização da tabela (15000 ms = 15 segundos)
-        setInterval(fetchAndUpdateTable, 15000);
-
+        // Manter página sempre ativa
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                updateClock();
+                fetchAndUpdateTable();
+            }
+        });
     </script>
 </body>
 </html>
-
