@@ -188,7 +188,7 @@
         /* Ajustar cores dos status conforme especificação */
         .status-badge.bg-blue-600 {
             background-color: #22c55e !important;
-            color: white !important;
+            color: black !important;
             border: none;
         }
 
@@ -206,7 +206,7 @@
 
         .status-badge.bg-yellow-500 {
             background-color: #f97316 !important;
-            color: white !important;
+            color: black !important;
             border: none;
         }
 
@@ -398,7 +398,7 @@
             } catch (error) {
                 console.error("Falha ao buscar dados:", error);
                 document.getElementById('tickets-container').innerHTML = 
-                    '<div style="padding: 20px; color: #ef4444; font-size: 18px;">Falha ao carregar dados. Tentando novamente...</div>';
+                    '<div style="padding: 20px; color: #ef4444; font-size: 48px;">Falha ao recuperar dados. Esta pagina ficará indisponível.</div>';
             }
         }
 
