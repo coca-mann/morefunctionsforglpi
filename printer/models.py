@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import JSONField
 
 class Impressora(models.Model):
     # O nome principal, que usaremos como identificador único
@@ -55,6 +56,7 @@ class Impressora(models.Model):
 class EtiquetaLayout(models.Model):
     """
     Armazena as configurações de design para um tipo de etiqueta.
+    AGORA COM SUPORTE A LAYOUT DINÂMICO.
     """
     nome = models.CharField(
         max_length=100,
@@ -63,21 +65,12 @@ class EtiquetaLayout(models.Model):
     )
     descricao = models.TextField(blank=True, help_text="Descrição opcional do uso deste layout.")
     
-    # Dimensões
+    # --- DIMENSÕES (Sem mudança) ---
     largura_mm = models.FloatField(default=50, help_text="Largura da etiqueta em milímetros (mm).")
     altura_mm = models.FloatField(default=50, help_text="Altura da etiqueta em milímetros (mm).")
     
-    # Configurações do Título
-    altura_titulo_mm = models.FloatField(default=8, help_text="Altura da caixa do título em milímetros (mm).")
-    tamanho_fonte_titulo = models.IntegerField(default=12, help_text="Tamanho da fonte do título em pontos (pt).")
-
-    # Configurações do QR Code
-    margem_vertical_qr_mm = models.FloatField(
-        default=1,
-        help_text="Margem vertical (acima e abaixo) do QR Code em milímetros (mm)."
-    )
-    
-    # Configurações da Fonte
+    # --- FONTE (Sem mudança) ---
+    # (Mantemos isso pois a fonte é uma propriedade do layout, não de um elemento)
     arquivo_fonte = models.FileField(
         upload_to='fonts/',
         help_text="Arquivo da fonte .ttf (ex: ariblk.ttf). Faça o upload aqui."
@@ -87,7 +80,20 @@ class EtiquetaLayout(models.Model):
         help_text="Nome a ser usado para registrar a fonte no ReportLab (ex: 'Arial-Black')."
     )
 
-    # Controle
+    # --- CAMPO DINÂMICO (A GRANDE MUDANÇA) ---
+    # Este campo vai armazenar a "receita" do layout (posições, tamanhos, etc.)
+    layout_json = JSONField(
+        default=list, # Por padrão, é uma lista vazia
+        blank=True,
+        help_text="Definição JSON dos elementos do layout (gerenciado pelo editor visual)."
+    )
+
+    # --- CAMPOS ANTIGOS (REMOVIDOS) ---
+    # altura_titulo_mm (agora vive dentro do layout_json)
+    # tamanho_fonte_titulo (agora vive dentro do layout_json)
+    # margem_vertical_qr_mm (agora vive dentro do layout_json)
+
+    # --- CONTROLE (Sem mudança) ---
     padrao = models.BooleanField(
         default=False,
         help_text="Marque para definir este como o layout padrão para novas impressões."

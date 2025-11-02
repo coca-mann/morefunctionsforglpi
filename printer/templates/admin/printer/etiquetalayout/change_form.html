@@ -1,0 +1,58 @@
+{% extends "admin/change_form.html" %}
+{% load static %}
+
+{# Este bloco renderizará TODOS os campos, incluindo o layout_json #}
+{% block field_sets %}
+  {{ block.super }}
+{% endblock %}
+
+{# Este bloco é renderizado DEPOIS dos campos #}
+{% block after_field_sets %}
+  {{ block.super }}
+
+  <h2>Editor Visual de Layout</h2>
+  
+  <div class="editor-container">
+    <div class="label-canvas-wrapper">
+      <div id="label-canvas"></div>
+    </div>
+    
+    <div class="editor-controls">
+      <fieldset class="module">
+        <h3>Adicionar Elemento</h3>
+        <button type="button" class="button" id="add-text-btn">Adicionar Texto</button>
+        <button type="button" class="button" id="add-qr-btn">Adicionar QR Code</button>
+      </fieldset>
+
+      <fieldset class="module" id="property-panel" style="display: none;">
+        <h3>Propriedades do Elemento</h3>
+        <div class="form-row">
+            <label for="prop-data-source">Fonte do Dado:</label>
+            <select id="prop-data-source">
+                <option value="titulo">Título (titulo)</option>
+                <option value="url">URL (url)</option>
+                <option value="custom">Texto Fixo</option>
+            </select>
+        </div>
+        <div class="form-row" id="custom-text-wrapper">
+            <label for="prop-custom-text">Texto Fixo:</label>
+            <input type="text" id="prop-custom-text">
+        </div>
+        <div class="form-row" id="font-size-wrapper">
+            <label for="prop-font-size">Tam. Fonte (pt):</label>
+            <input type="number" id="prop-font-size" step="1">
+        </div>
+        <div class="form-row">
+            <label for="prop-font-weight">Negrito:</label>
+            <input type="checkbox" id="prop-font-weight">
+        </div>
+        <div class="form-row">
+            <label for="prop-background">Fundo Preto:</label>
+            <input type="checkbox" id="prop-background">
+        </div>
+        <hr>
+        <button type="button" class="button" id="remove-element-btn" style="background: var(--error-fg); color: white;">Remover Elemento</button>
+      </fieldset>
+    </div>
+  </div>
+{% endblock %}

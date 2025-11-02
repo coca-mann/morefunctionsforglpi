@@ -18,19 +18,14 @@
       margin-right: 5px;
       margin-bottom: 10px;
       
-      /* ---- NOVO: Estilo para botões inativos ---- */
-      /* Fazemos os botões inativos ficarem levemente transparentes */
       opacity: 0.7;
-      /* Adiciona uma borda transparente para evitar "pulo" no layout */
       border-width: 2px;
       border-color: transparent; 
-      /* Adiciona uma transição suave */
       transition: opacity 0.2s ease, border-color 0.2s ease;
     }
 
     .asset-filters button.active {
-      opacity: 1; /* Opacidade total */
-      /* Adiciona uma borda na cor principal do tema */
+      opacity: 1;
       border-color: var(--custom-header-link-color); 
     }
     
@@ -42,26 +37,23 @@
       background: var(--custom-module-bg); 
       padding: 10px;
       border-radius: 4px;
-      gap: 15px; /* Adiciona espaço entre os itens da barra */
+      gap: 15px;
     }
 
-    /* ---- NOVO: Estilos do Campo de Pesquisa ---- */
     .search-wrapper {
-      flex-grow: 1; /* Faz a pesquisa ocupar o espaço disponível */
+      flex-grow: 1;
       text-align: center;
     }
 
     #search-input {
-      width: 60%; /* Ocupa 60% do espaço disponível */
+      width: 60%;
       padding: 8px 10px;
       border: 1px solid var(--custom-border-color);
       border-radius: 4px;
-      /* Usa as cores do tema para fundo e texto */
       background-color: var(--custom-body-bg); 
       color: var(--body-fg); 
-      box-sizing: border-box; /* Garante que o padding não quebre o layout */
+      box-sizing: border-box;
     }
-    /* ---- FIM DOS NOVOS ESTILOS ---- */
     
     .table-container {
       max-height: 50vh;
@@ -135,7 +127,6 @@
 {% endblock %}
 
 {% block content %}
-<h1>{{ title }}</h1>
 
 <p>Selecione um tipo de ativo para carregar os itens. Em seguida, selecione os itens que deseja imprimir.</p>
 
@@ -216,11 +207,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- 1. Ação dos Botões de Filtro ---
-    // --- 1. Ação dos Botões de Filtro ---
     filterButtons.forEach(button => {
         button.addEventListener('click', () => {
             
-            // ---- INÍCIO DA MUDANÇA ----
             // 1. Remove a classe 'active' de TODOS os botões
             filterButtons.forEach(btn => btn.classList.remove('active'));
             // 2. Adiciona a classe 'active' apenas ao botão que foi clicado
@@ -251,7 +240,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const assets = await response.json();
             fetchedAssets = assets; // Salva os dados brutos
             
-            // ---- MUDANÇA: Função centralizada para renderizar ----
             applyFiltersAndSort(); 
 
         } catch (error) {

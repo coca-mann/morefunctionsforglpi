@@ -1,0 +1,92 @@
+/* Container principal do editor */
+.editor-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    background: var(--module-bg);
+    padding: 20px;
+    border-radius: 4px;
+}
+
+/* Wrapper do "Canvas" da etiqueta */
+.label-canvas-wrapper {
+    flex: 3; /* Ocupa 3/4 do espaço */
+    min-width: 400px;
+    padding: 20px;
+    background: #555; /* Fundo escuro para destacar a etiqueta */
+    border-radius: 4px;
+    overflow: auto; /* Permite scroll se o zoom deixar grande */
+    height: 70vh; /* Aumenta a altura vertical */
+}
+
+/* O "Canvas" (a etiqueta virtual) */
+#label-canvas {
+    background: white;
+    border: 1px dashed #ccc;
+    position: relative; 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    /* O tamanho será definido pelo JS com zoom */
+    /* Adiciona 'transform-origin' para futuros controles de zoom */
+    transform-origin: top left;
+}
+
+/* Painel de controles e propriedades */
+.editor-controls {
+    flex: 1; /* Ocupa 1/4 do espaço */
+    min-width: 250px;
+}
+
+/* Estilos dos elementos arrastáveis (Título, QR Code) */
+.label-element {
+    position: absolute; 
+    border: 1px dashed #007bff;
+    padding: 4px;
+    box-sizing: border-box; 
+    cursor: move;
+    user-select: none;
+}
+
+/* --- MUDANÇA (COR DO TEXTO) --- */
+.label-element[data-type="text"] {
+    white-space: nowrap;
+    color: #000; /* Define o padrão como preto */
+}
+
+/* Estilo para elemento de QR CODE (placeholder) */
+.label-element[data-type="qrcode"] {
+    background-color: #f0f0f0;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M10 10h30v30H10z m50 0h30v30H60z M10 60h30v30H10z M60 60h30v30H60z M45 45h10v10H45z" fill="%23333"/></svg>');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+/* --- MUDANÇA (COR DO TEXTO) --- */
+/* Sobrescreve a cor QUANDO o fundo está ativo */
+.label-element.has-background {
+    background-color: #000;
+    color: #fff !important; /* !important para garantir a sobreposição */
+}
+
+/* Estilo do elemento QUANDO SELECIONADO */
+.label-element.selected {
+    border: 2px solid var(--header-link-color);
+    box-shadow: 0 0 10px var(--header-link-color);
+    z-index: 10;
+}
+
+/* Estilos para o painel de propriedades */
+#property-panel .form-row {
+    margin-bottom: 10px;
+}
+#property-panel label {
+    display: block;
+    margin-bottom: 2px;
+    font-weight: bold;
+}
+#property-panel input[type="text"],
+#property-panel input[type="number"],
+#property-panel select {
+    width: 100%;
+    box-sizing: border-box;
+}

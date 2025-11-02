@@ -66,12 +66,13 @@ def imprimir_pdf_na_impressora_padrao(caminho_do_pdf):
 
 def gerar_e_imprimir_etiquetas(lista_de_etiquetas: list):
     """
-    Busca o layout padrão, gera um PDF com múltiplas etiquetas, imprime e descarta.
+    Busca o layout padrão, GERA UM PDF DINÂMICO lendo o 'layout_json',
+    imprime e descarta.
     """
     if not lista_de_etiquetas:
         return (False, "A lista de etiquetas para impressão está vazia.")
 
-    # --- 1. BUSCAR O LAYOUT PADRÃO NO BANCO DE DADOS ---
+    # --- 1. BUSCAR O LAYOUT PADRÃO (Sem mudança) ---
     try:
         layout = EtiquetaLayout.objects.get(padrao=True)
     except EtiquetaLayout.DoesNotExist:
@@ -79,62 +80,104 @@ def gerar_e_imprimir_etiquetas(lista_de_etiquetas: list):
     except EtiquetaLayout.MultipleObjectsReturned:
         return (False, "ERRO: Mais de um Layout de Etiqueta está marcado como padrão.")
 
-    # --- 2. USAR AS CONFIGURAÇÕES DO MODELO EM VEZ DE VALORES FIXOS ---
-    LARGURA_ETIQUETA = layout.largura_mm * mm
-    ALTURA_ETIQUETA = layout.altura_mm * mm
-    MARGEM_VERTICAL_QR_INTERNA = layout.margem_vertical_qr_mm * mm
-    
+    # --- 2. REGISTRAR FONTE (Sem mudança) ---
     try:
-        # Usa o caminho do arquivo que foi feito upload
         caminho_fonte = layout.arquivo_fonte.path
         pdfmetrics.registerFont(TTFont(layout.nome_fonte_reportlab, caminho_fonte))
     except Exception as e:
         return (False, f"Erro ao carregar a fonte '{layout.nome_fonte_reportlab}': {e}.")
 
-    # --- 3. Geração do PDF em memória (o resto do código usa as variáveis acima) ---
+    # --- 3. CONFIGURAÇÕES DO CANVAS (Sem mudança) ---
+    LARGURA_ETIQUETA = layout.largura_mm * mm
+    ALTURA_ETIQUETA = layout.altura_mm * mm
+    
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=(LARGURA_ETIQUETA, ALTURA_ETIQUETA))
 
     print(f"Gerando {len(lista_de_etiquetas)} etiqueta(s) com o layout '{layout.nome}'...")
+
+    # --- 4. LÓGICA DE RENDERIZAÇÃO DINÂMICA (A GRANDE MUDANÇA) ---
+    
+    # Pega a "receita" do JSON
+    elementos_layout = layout.layout_json
+    if not elementos_layout:
+        return (False, f"O layout '{layout.nome}' está vazio. Adicione elementos no editor do admin.")
+
+    # Itera sobre cada ETIQUETA a ser impressa (ex: 3 ativos = 3 páginas)
     for dados_etiqueta in lista_de_etiquetas:
-        titulo = dados_etiqueta.get('titulo', 'SEM TÍTULO')
-        url = dados_etiqueta.get('url', '')
-
-        # Usa os valores do layout para o desenho
-        altura_caixa_titulo = layout.altura_titulo_mm * mm
-        y_caixa_titulo = ALTURA_ETIQUETA - altura_caixa_titulo
-        c.setFillColor(colors.black)
-        c.rect(0, y_caixa_titulo, LARGURA_ETIQUETA, altura_caixa_titulo, stroke=0, fill=1)
-
-        c.setFillColor(colors.white)
-        # Usa o nome e tamanho da fonte do layout
-        c.setFont(layout.nome_fonte_reportlab, layout.tamanho_fonte_titulo)
-        c.drawCentredString(LARGURA_ETIQUETA / 2, y_caixa_titulo + (altura_caixa_titulo / 4), titulo)
-
-        # A lógica do QR Code continua a mesma, mas agora usa as variáveis do layout
-        qr_maker = qrcode.QRCode(version=None, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=0)
-        qr_maker.add_data(url)
-        qr_maker.make(fit=True)
-        qr_img = qr_maker.make_image(fill_color="black", back_color="white").convert("RGB")
         
-        espaco_vertical_para_qr_code = y_caixa_titulo
-        altura_util_qr = espaco_vertical_para_qr_code - (MARGEM_VERTICAL_QR_INTERNA * 2)
-        largura_util_qr = LARGURA_ETIQUETA
-        tamanho_final_qr = min(altura_util_qr, largura_util_qr)
-        y_pos_qr = MARGEM_VERTICAL_QR_INTERNA
-        x_pos_qr = (LARGURA_ETIQUETA - tamanho_final_qr) / 2
-        
-        c.drawInlineImage(qr_img, x_pos_qr, y_pos_qr, width=tamanho_final_qr, height=tamanho_final_qr)
+        # Itera sobre cada ELEMENTO no layout (ex: 1 Título, 1 QR Code)
+        for elemento in elementos_layout:
+            
+            # --- Conversão de Coordenadas ---
+            # O Editor (0,0) é Topo-Esquerda
+            # O ReportLab (0,0) é Baixo-Esquerda
+            # Precisamos converter o Y.
+            el_x = elemento.get('x', 0) * mm
+            el_y_editor = elemento.get('y', 0) * mm
+            
+            if elemento.get('type') == 'text':
+                el_h = elemento.get('height', 8) * mm
+                # Posição Y do ReportLab = AlturaTotal - PosiçãoYdoEditor - AlturaDoElemento
+                el_y = ALTURA_ETIQUETA - el_y_editor - el_h
+                
+                # Pega o dado (ex: 'titulo', 'url' ou 'custom')
+                data_key = elemento.get('data_source', 'titulo')
+                if data_key == 'custom':
+                    texto = elemento.get('custom_text', '')
+                else:
+                    texto = dados_etiqueta.get(data_key, f'[{data_key}?]')
+                
+                # Estilos
+                cor_fundo = colors.black if elemento.get('has_background') else None
+                cor_texto = colors.white if elemento.get('has_background') else colors.black
+                fonte = layout.nome_fonte_reportlab # Usa a fonte do layout
+                tamanho_fonte = elemento.get('font_size', 12)
+                
+                # Desenha o fundo (se houver)
+                if cor_fundo:
+                    c.setFillColor(cor_fundo)
+                    el_w = elemento.get('width', 40) * mm
+                    c.rect(el_x, el_y, el_w, el_h, stroke=0, fill=1)
+                
+                # Desenha o texto
+                c.setFillColor(cor_texto)
+                c.setFont(fonte, tamanho_fonte)
+                
+                # O ReportLab desenha a partir da base. 
+                # Adicionamos um pequeno ajuste (ex: 1/4 da altura) para centralizar verticalmente
+                ajuste_vertical = el_h / 4 
+                c.drawString(el_x, el_y + ajuste_vertical, texto)
+            
+            elif elemento.get('type') == 'qrcode':
+                el_size = elemento.get('size', 25) * mm
+                # Posição Y do ReportLab = AlturaTotal - PosiçãoYdoEditor - AlturaDoElemento
+                el_y = ALTURA_ETIQUETA - el_y_editor - el_size
+                
+                # Pega o dado
+                data_key = elemento.get('data_source', 'url')
+                url = dados_etiqueta.get(data_key, '')
+
+                # Gera o QR Code (mesma lógica sua)
+                qr_maker = qrcode.QRCode(version=None, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=0)
+                qr_maker.add_data(url)
+                qr_maker.make(fit=True)
+                qr_img = qr_maker.make_image(fill_color="black", back_color="white").convert("RGB")
+                
+                # Desenha a imagem do QR Code
+                c.drawInlineImage(qr_img, el_x, el_y, width=el_size, height=el_size)
         
         c.showPage()
     
+    # --- 5. SALVAR E IMPRIMIR (Sem mudança) ---
     c.save()
     buffer.seek(0)
     pdf_bytes = buffer.getvalue()
     buffer.close()
     
-    # --- Processo de impressão (sem alterações) ---
-    # ... (o resto da função continua exatamente igual) ...
+    # O resto da sua função (criar tempfile, chamar 'imprimir_pdf_na_impressora_padrao')
+    # continua EXATAMENTE IGUAL.
+    
     arquivo_temporario = None
     try:
         fd, path = tempfile.mkstemp(suffix='.pdf')

@@ -10,31 +10,30 @@ class ImpressoraSerializer(serializers.ModelSerializer):
 
 class EtiquetaLayoutListSerializer(serializers.ModelSerializer):
     """
-    Serializer para a listagem de layouts. Mostra o caminho do arquivo de fonte.
+    Serializer para a listagem de layouts.
     """
     class Meta:
         model = EtiquetaLayout
-        # Incluímos todos os campos para a listagem
+        # Atualize os campos
         fields = [
             'id', 'nome', 'descricao', 'largura_mm', 'altura_mm', 
-            'altura_titulo_mm', 'tamanho_fonte_titulo', 'margem_vertical_qr_mm', 
-            'arquivo_fonte', 'nome_fonte_reportlab', 'padrao'
+            'arquivo_fonte', 'nome_fonte_reportlab', 'padrao',
+            'layout_json' # Adicionado
         ]
 
 class EtiquetaLayoutUpdateSerializer(serializers.ModelSerializer):
     """
-    Serializer para a atualização de layouts. Torna o arquivo de fonte opcional na atualização.
+    Serializer para a atualização de layouts.
     """
-    # Usamos required=False para que não seja obrigatório enviar o arquivo em cada PATCH
     arquivo_fonte = serializers.FileField(required=False)
 
     class Meta:
         model = EtiquetaLayout
-        # Incluímos todos os campos que podem ser editados
+        # Atualize os campos
         fields = [
             'nome', 'descricao', 'largura_mm', 'altura_mm', 
-            'altura_titulo_mm', 'tamanho_fonte_titulo', 'margem_vertical_qr_mm', 
-            'arquivo_fonte', 'nome_fonte_reportlab', 'padrao'
+            'arquivo_fonte', 'nome_fonte_reportlab', 'padrao',
+            'layout_json' # Adicionado
         ]
 
 
