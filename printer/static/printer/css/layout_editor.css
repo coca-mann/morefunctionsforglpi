@@ -10,13 +10,13 @@
 
 /* Wrapper do "Canvas" da etiqueta */
 .label-canvas-wrapper {
-    flex: 3; /* Ocupa 3/4 do espaço */
+    flex: 3;
     min-width: 400px;
     padding: 20px;
-    background: #555; /* Fundo escuro para destacar a etiqueta */
+    background: #555;
     border-radius: 4px;
-    overflow: auto; /* Permite scroll se o zoom deixar grande */
-    height: 70vh; /* Aumenta a altura vertical */
+    overflow: auto;
+    height: 70vh;
 }
 
 /* O "Canvas" (a etiqueta virtual) */
@@ -25,18 +25,16 @@
     border: 1px dashed #ccc;
     position: relative; 
     box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-    /* O tamanho será definido pelo JS com zoom */
-    /* Adiciona 'transform-origin' para futuros controles de zoom */
     transform-origin: top left;
 }
 
 /* Painel de controles e propriedades */
 .editor-controls {
-    flex: 1; /* Ocupa 1/4 do espaço */
+    flex: 1;
     min-width: 250px;
 }
 
-/* Estilos dos elementos arrastáveis (Título, QR Code) */
+/* Estilos dos elementos arrastáveis */
 .label-element {
     position: absolute; 
     border: 1px dashed #007bff;
@@ -46,26 +44,45 @@
     user-select: none;
 }
 
-/* --- MUDANÇA (COR DO TEXTO) --- */
+/* --- ESTILOS DE TEXTO (MODIFICADOS) --- */
 .label-element[data-type="text"] {
+    color: #000;
+    /* Padrão: linha única com ellipsis */
     white-space: nowrap;
-    color: #000; /* Define o padrão como preto */
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
+/* Se a quebra de linha estiver ATIVA */
+.label-element[data-type="text"].allow-wrap {
+    white-space: normal;
+    overflow: hidden; /* Oculta o estouro do texto */
+    word-wrap: break-word; /* Quebra palavras */
+    text-overflow: clip; /* Apenas corta (ellipsis multi-linha é complexo) */
+}
+/* --- FIM DOS ESTILOS DE TEXTO --- */
 
-/* Estilo para elemento de QR CODE (placeholder) */
+
+/* --- ESTILOS DE QR CODE (MODIFICADOS) --- */
 .label-element[data-type="qrcode"] {
     background-color: #f0f0f0;
+    /* Placeholder padrão (preto no branco) */
     background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M10 10h30v30H10z m50 0h30v30H60z M10 60h30v30H10z M60 60h30v30H60z M45 45h10v10H45z" fill="%23333"/></svg>');
-    background-size: contain;
+    background-size: 90%;
     background-repeat: no-repeat;
     background-position: center;
 }
+/* Placeholder invertido (branco no preto) */
+.label-element[data-type="qrcode"].has-background {
+    background-color: #000; /* Fundo preto */
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M0 0h100v100H0z" fill="%23000"/><path d="M10 10h30v30H10z m50 0h30v30H60z M10 60h30v30H10z M60 60h30v30H60z M45 45h10v10H45z" fill="%23fff"/></svg>');
+}
+/* --- FIM DOS ESTILOS DE QR CODE --- */
 
-/* --- MUDANÇA (COR DO TEXTO) --- */
-/* Sobrescreve a cor QUANDO o fundo está ativo */
+
+/* Sobrescreve a cor do TEXTO QUANDO o fundo está ativo */
 .label-element.has-background {
     background-color: #000;
-    color: #fff !important; /* !important para garantir a sobreposição */
+    color: #fff !important; 
 }
 
 /* Estilo do elemento QUANDO SELECIONADO */
@@ -76,17 +93,8 @@
 }
 
 /* Estilos para o painel de propriedades */
-#property-panel .form-row {
-    margin-bottom: 10px;
-}
-#property-panel label {
-    display: block;
-    margin-bottom: 2px;
-    font-weight: bold;
-}
+#property-panel .form-row { margin-bottom: 10px; }
+#property-panel label { display: block; margin-bottom: 2px; font-weight: bold; }
 #property-panel input[type="text"],
 #property-panel input[type="number"],
-#property-panel select {
-    width: 100%;
-    box-sizing: border-box;
-}
+#property-panel select { width: 100%; box-sizing: border-box; }

@@ -1,36 +1,15 @@
-// Aguarda o 'interact' e o DOM estarem prontos
 window.addEventListener('DOMContentLoaded', () => {
 
-    console.log("--- INICIANDO EDITOR DE LAYOUT (MODO DE DEPURAÇÃO) ---");
-
-    // --- 1. REFERÊNCIAS AOS ELEMENTOS (COM LOGS) ---
+    // --- 1. REFERÊNCIAS AOS ELEMENTOS ---
     const canvas = document.getElementById('label-canvas');
-    console.log("Canvas (#label-canvas):", canvas ? "ENCONTRADO" : "FALHOU");
-
     const propertyPanel = document.getElementById('property-panel');
-    console.log("Painel de Propriedades (#property-panel):", propertyPanel ? "ENCONTRADO" : "FALHOU");
-
     const form = document.querySelector('#content-main form');
-    console.log("Formulário Admin (#content-main form):", form ? "ENCONTRADO" : "FALHOU");
-    
     const widthField = document.getElementById('id_largura_mm');
-    console.log("Campo Largura (#id_largura_mm):", widthField ? "ENCONTRADO" : "FALHOU");
-
     const heightField = document.getElementById('id_altura_mm');
-    console.log("Campo Altura (#id_altura_mm):", heightField ? "ENCONTRADO" : "FALHOU");
-    
-    const jsonField = document.getElementById('id_layout_json');
-    console.log("Campo JSON (#id_layout_json):", jsonField ? "ENCONTRADO" : "FALHOU");
-    
+    const jsonField = document.getElementById('id_layout_json'); // Agora deve funcionar
     const addTextBtn = document.getElementById('add-text-btn');
-    console.log("Botão Texto (#add-text-btn):", addTextBtn ? "ENCONTRADO" : "FALHOU");
-
     const addQrBtn = document.getElementById('add-qr-btn');
-    console.log("Botão QR (#add-qr-btn):", addQrBtn ? "ENCONTRADO" : "FALHOU");
-    
     const removeElementBtn = document.getElementById('remove-element-btn');
-
-    // ... (Referências aos campos de propriedades) ...
     const propDataSource = document.getElementById('prop-data-source');
     const propCustomTextWrapper = document.getElementById('custom-text-wrapper');
     const propCustomText = document.getElementById('prop-custom-text');
@@ -38,14 +17,35 @@ window.addEventListener('DOMContentLoaded', () => {
     const propFontSize = document.getElementById('prop-font-size');
     const propFontWeight = document.getElementById('prop-font-weight');
     const propBackground = document.getElementById('prop-background');
+
+    const propFontWeightWrapper = document.getElementById('font-weight-wrapper');
     
+    const propWrapTextWrapper = document.getElementById('wrap-text-wrapper');
+    const propWrapText = document.getElementById('prop-wrap-text');
+
     let selectedElement = null; 
-    
     const PIXELS_PER_MM = 3.7795; 
     const ZOOM_FACTOR = 2.0; 
     const FINAL_RATIO = PIXELS_PER_MM * ZOOM_FACTOR;
 
     // --- 2. FUNÇÕES PRINCIPAIS ---
+
+    // ---- INÍCIO DA CORREÇÃO ----
+    // O Django agora renderiza o campo. Vamos escondê-lo.
+    if (jsonField) {
+        // Encontra o 'form-row' pai do <textarea> e o esconde
+        const formRow = jsonField.closest('.form-row');
+        if (formRow) {
+            formRow.style.display = 'none';
+        } else {
+            // Plano B se não encontrar o form-row (improvável)
+            jsonField.style.display = 'none';
+        }
+    } else {
+        // Esta mensagem de erro agora é a mais importante
+        console.error("ERRO CRÍTICO: Campo 'id_layout_json' não foi encontrado no HTML! O salvamento falhará.");
+    }
+    // ---- FIM DA CORREÇÃO ----
     
     function updateCanvasSize() {
         if (!widthField || !heightField || !canvas) return;
@@ -93,6 +93,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 font_size: parseInt(el.style.fontSize) || 12,
                 font_weight: el.style.fontWeight,
                 has_background: el.classList.contains('has-background'),
+                allow_wrap: el.dataset.allowWrap === 'true'
             };
             layoutData.push(elementData);
         });
@@ -121,6 +122,8 @@ window.addEventListener('DOMContentLoaded', () => {
         el.style.transform = `translate(${x_px}px, ${y_px}px)`;
         el.dataset.x = x_px;
         el.dataset.y = y_px;
+        config.allow_wrap = config.allow_wrap || false;
+
         updateElementVisuals(el, config);
         el.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -136,6 +139,16 @@ window.addEventListener('DOMContentLoaded', () => {
             el.style.fontSize = `${config.font_size || 12}pt`;
             el.style.fontWeight = config.font_weight || 'normal';
             el.style.color = config.has_background ? '#fff' : '#000';
+            
+            // Aplica/remove a classe de quebra de linha
+            el.dataset.allowWrap = config.allow_wrap || false;
+            if (config.allow_wrap) {
+                el.classList.add('allow-wrap');
+            } else {
+                el.classList.remove('allow-wrap');
+            }
+            
+            // Texto de placeholder
             if (config.data_source === 'custom') {
                 el.innerText = config.custom_text || '[Texto Fixo]';
             } else if (config.data_source === 'url') {
@@ -160,16 +173,26 @@ window.addEventListener('DOMContentLoaded', () => {
             propertyPanel.style.display = 'none';
             return;
         }
+        
         el.classList.add('selected');
         propertyPanel.style.display = 'block';
+        
         const isText = el.dataset.type === 'text';
+
+        // Preenche o painel
         propDataSource.value = el.dataset.dataSource || 'titulo';
         propCustomText.value = el.dataset.customText || '';
+        propBackground.checked = el.classList.contains('has-background');
+        
+        // --- MOSTRA/ESCONDE CAMPOS DE TEXTO ---
         propFontSize.value = parseInt(el.style.fontSize) || 12;
         propFontWeight.checked = (el.style.fontWeight === 'bold');
-        propBackground.checked = el.classList.contains('has-background');
+        propWrapText.checked = (el.dataset.allowWrap === 'true'); // <-- LÊ A FLAG
+
         propFontSizeWrapper.style.display = isText ? 'block' : 'none';
-        propFontWeight.parentElement.style.display = isText ? 'block' : 'none';
+        propFontWeightWrapper.style.display = isText ? 'block' : 'none';
+        propWrapTextWrapper.style.display = isText ? 'block' : 'none'; // <-- MOSTRA/ESCONDE
+        
         propCustomTextWrapper.style.display = (propDataSource.value === 'custom') ? 'block' : 'none';
     }
 
@@ -195,19 +218,55 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (removeElementBtn) removeElementBtn.addEventListener('click', () => { /* ... */ });
-    if (canvas) canvas.addEventListener('click', () => { /* ... */ });
-    if (propertyPanel) propertyPanel.addEventListener('change', (e) => { /* ... */ });
+    if (removeElementBtn) {
+        removeElementBtn.addEventListener('click', () => {
+            if (selectedElement) {
+                selectedElement.remove();
+                selectElement(null); 
+            }
+        });
+    }
+
+    if (canvas) {
+        canvas.addEventListener('click', () => {
+            selectElement(null);
+        });
+    }
+
+    if (propertyPanel) {
+        propertyPanel.addEventListener('change', (e) => {
+            if (!selectedElement) return;
+            
+            // O objeto 'config' agora inclui o 'type' do elemento
+            const config = {
+                type: selectedElement.dataset.type, // <-- A LINHA QUE FALTAVA
+                data_source: propDataSource.value,
+                custom_text: propCustomText.value,
+                font_size: parseInt(propFontSize.value),
+                font_weight: propFontWeight.checked ? 'bold' : 'normal',
+                has_background: propBackground.checked,
+                allow_wrap: propWrapText.checked // <-- LÊ A FLAG
+            };
+            
+            propCustomTextWrapper.style.display = (config.data_source === 'custom') ? 'block' : 'none';
+            
+            // Agora, 'updateElementVisuals' receberá o 'config.type'
+            // e aplicará as mudanças de fonte, negrito e cor.
+            updateElementVisuals(selectedElement, config);
+        });
+    }
     
     if (form) {
         form.addEventListener('submit', () => {
             saveLayout(); 
         });
+    } else {
+        console.error("ERRO CRÍTICO: Formulário admin '#content-main form' não encontrado!");
     }
     
     // --- 4. INICIALIZAÇÃO ---
+    // Esta verificação agora deve passar
     if (canvas && widthField && heightField && jsonField) {
-        console.log("Todos os elementos essenciais foram encontrados. Inicializando editor.");
         updateCanvasSize();
         loadLayout();
     } else {
@@ -219,6 +278,7 @@ window.addEventListener('DOMContentLoaded', () => {
         console.error("Biblioteca 'interact.js' não foi carregada. Arrastar e soltar não funcionará.");
         return;
     }
+
     interact('.label-element')
         .draggable({
             listeners: {

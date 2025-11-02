@@ -10,6 +10,8 @@ from reportlab.lib.units import mm
 from reportlab.lib import colors
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.platypus import Paragraph
+from reportlab.lib.styles import ParagraphStyle
 import qrcode
 from PIL import Image
 
@@ -95,33 +97,26 @@ def gerar_e_imprimir_etiquetas(lista_de_etiquetas: list):
     c = canvas.Canvas(buffer, pagesize=(LARGURA_ETIQUETA, ALTURA_ETIQUETA))
 
     print(f"Gerando {len(lista_de_etiquetas)} etiqueta(s) com o layout '{layout.nome}'...")
-
-    # --- 4. LÓGICA DE RENDERIZAÇÃO DINÂMICA (A GRANDE MUDANÇA) ---
     
-    # Pega a "receita" do JSON
     elementos_layout = layout.layout_json
     if not elementos_layout:
         return (False, f"O layout '{layout.nome}' está vazio. Adicione elementos no editor do admin.")
 
-    # Itera sobre cada ETIQUETA a ser impressa (ex: 3 ativos = 3 páginas)
+    # Itera sobre cada ETIQUETA a ser impressa
     for dados_etiqueta in lista_de_etiquetas:
         
-        # Itera sobre cada ELEMENTO no layout (ex: 1 Título, 1 QR Code)
+        # Itera sobre cada ELEMENTO no layout
         for elemento in elementos_layout:
             
-            # --- Conversão de Coordenadas ---
-            # O Editor (0,0) é Topo-Esquerda
-            # O ReportLab (0,0) é Baixo-Esquerda
-            # Precisamos converter o Y.
             el_x = elemento.get('x', 0) * mm
             el_y_editor = elemento.get('y', 0) * mm
             
             if elemento.get('type') == 'text':
+                el_w = elemento.get('width', 40) * mm
                 el_h = elemento.get('height', 8) * mm
-                # Posição Y do ReportLab = AlturaTotal - PosiçãoYdoEditor - AlturaDoElemento
+                # Coordenada Y (bottom-left) da CAIXA do elemento
                 el_y = ALTURA_ETIQUETA - el_y_editor - el_h
                 
-                # Pega o dado (ex: 'titulo', 'url' ou 'custom')
                 data_key = elemento.get('data_source', 'titulo')
                 if data_key == 'custom':
                     texto = elemento.get('custom_text', '')
@@ -129,42 +124,94 @@ def gerar_e_imprimir_etiquetas(lista_de_etiquetas: list):
                     texto = dados_etiqueta.get(data_key, f'[{data_key}?]')
                 
                 # Estilos
-                cor_fundo = colors.black if elemento.get('has_background') else None
-                cor_texto = colors.white if elemento.get('has_background') else colors.black
-                fonte = layout.nome_fonte_reportlab # Usa a fonte do layout
+                has_background = elemento.get('has_background', False)
+                cor_fundo = colors.black if has_background else None
+                cor_texto = colors.white if has_background else colors.black
+                fonte = layout.nome_fonte_reportlab
                 tamanho_fonte = elemento.get('font_size', 12)
                 
                 # Desenha o fundo (se houver)
                 if cor_fundo:
                     c.setFillColor(cor_fundo)
-                    el_w = elemento.get('width', 40) * mm
                     c.rect(el_x, el_y, el_w, el_h, stroke=0, fill=1)
                 
-                # Desenha o texto
-                c.setFillColor(cor_texto)
-                c.setFont(fonte, tamanho_fonte)
+                # --- LÓGICA DE QUEBRA DE LINHA (NOVO) ---
+                allow_wrap = elemento.get('allow_wrap', False)
                 
-                # O ReportLab desenha a partir da base. 
-                # Adicionamos um pequeno ajuste (ex: 1/4 da altura) para centralizar verticalmente
-                ajuste_vertical = el_h / 4 
-                c.drawString(el_x, el_y + ajuste_vertical, texto)
+                if allow_wrap:
+                    # Usa Paragraph para quebra de linha
+                    style = ParagraphStyle(
+                        'label_text_wrap',
+                        fontName=fonte,
+                        fontSize=tamanho_fonte,
+                        textColor=cor_texto,
+                        wordWrap='break', # Quebra palavras longas
+                    )
+                    p = Paragraph(texto, style)
+                    p.wrapOn(c, el_w, el_h)
+                    
+                    # Salva o estado do canvas
+                    c.saveState()
+                    # Cria um "caminho de corte" (clipping path)
+                    path = c.beginPath()
+                    path.rect(el_x, el_y, el_w, el_h)
+                    c.clipPath(path, stroke=0, fill=0)
+                    
+                    # Desenha o parágrafo (ele vai quebrar, mas será cortado pelo clip)
+                    p.drawOn(c, el_x, el_y)
+                    # Restaura o estado (remove o corte)
+                    c.restoreState()
+                    
+                else:
+                    # Usa drawString para linha única (lógica antiga com melhoria)
+                    c.setFillColor(cor_texto)
+                    c.setFont(fonte, tamanho_fonte)
+                    
+                    # Lógica de Ellipsis (...)
+                    text_width = pdfmetrics.stringWidth(texto, fonte, tamanho_fonte)
+                    if text_width > el_w:
+                        # Trunca o texto e adiciona "..."
+                        # Esta é uma aproximação, mas funcional
+                        try:
+                            avg_char_width = text_width / len(texto)
+                            max_chars = int(el_w / avg_char_width) - 3
+                            if max_chars < 1: max_chars = 1
+                            texto = texto[:max_chars] + "..."
+                        except ZeroDivisionError:
+                            texto = "..."
+
+                    # Centraliza verticalmente (aproximação)
+                    ajuste_vertical = (el_h - tamanho_fonte) / 2
+                    c.drawString(el_x, el_y + ajuste_vertical, texto)
+
             
             elif elemento.get('type') == 'qrcode':
                 el_size = elemento.get('size', 25) * mm
-                # Posição Y do ReportLab = AlturaTotal - PosiçãoYdoEditor - AlturaDoElemento
                 el_y = ALTURA_ETIQUETA - el_y_editor - el_size
                 
-                # Pega o dado
                 data_key = elemento.get('data_source', 'url')
-                url = dados_etiqueta.get(data_key, '')
+                if data_key == 'custom':
+                    data_to_encode = elemento.get('custom_text', '')
+                else:
+                    # Pega de 'dados_etiqueta' (ex: 'url' ou 'titulo')
+                    data_to_encode = dados_etiqueta.get(data_key, '')
 
-                # Gera o QR Code (mesma lógica sua)
+                # --- LÓGICA DE QR INVERTIDO (NOVO) ---
+                has_background = elemento.get('has_background', False)
+                fill_color = "white" if has_background else "black"
+                back_color = "black" if has_background else "white"
+
+                # Geração do QR Code
                 qr_maker = qrcode.QRCode(version=None, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=0)
-                qr_maker.add_data(url)
-                qr_maker.make(fit=True)
-                qr_img = qr_maker.make_image(fill_color="black", back_color="white").convert("RGB")
                 
-                # Desenha a imagem do QR Code
+                # Usa a variável correta
+                qr_maker.add_data(data_to_encode) 
+                
+                qr_maker.make(fit=True)
+                
+                # Usa as cores corretas
+                qr_img = qr_maker.make_image(fill_color=fill_color, back_color=back_color).convert("RGB")
+                
                 c.drawInlineImage(qr_img, el_x, el_y, width=el_size, height=el_size)
         
         c.showPage()
