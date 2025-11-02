@@ -13,8 +13,7 @@
       <tbody>
         <tr class="model-group">
           <th scope="row">
-            {# Este é o nosso botão! #}
-            {# Ele usa o 'name' que definimos na URL (Passo 2) #}
+            {# Seu link existente #}
             <a href="{% url 'sincronizar_impressoras' %}">
               Sincronizar Impressoras
             </a>
@@ -23,7 +22,19 @@
             Clique para iniciar a sincronização manual das impressoras.
           </td>
         </tr>
-      </tbody>
+        
+        <tr class="model-group">
+          <th scope="row">
+            {# Este é o nosso novo link! #}
+            <a href="{% url 'admin_impressao_etiquetas' %}">
+              Impressão de Etiquetas de Ativos
+            </a>
+          </th>
+          <td>
+            Selecione ativos do GLPI para gerar etiquetas de impressão.
+          </td>
+        </tr>
+        </tbody>
     </table>
   </div>
 {% endblock %}
