@@ -17,6 +17,21 @@
     .asset-filters button {
       margin-right: 5px;
       margin-bottom: 10px;
+      
+      /* ---- NOVO: Estilo para botões inativos ---- */
+      /* Fazemos os botões inativos ficarem levemente transparentes */
+      opacity: 0.7;
+      /* Adiciona uma borda transparente para evitar "pulo" no layout */
+      border-width: 2px;
+      border-color: transparent; 
+      /* Adiciona uma transição suave */
+      transition: opacity 0.2s ease, border-color 0.2s ease;
+    }
+
+    .asset-filters button.active {
+      opacity: 1; /* Opacidade total */
+      /* Adiciona uma borda na cor principal do tema */
+      border-color: var(--custom-header-link-color); 
     }
     
     .controls-bar {
@@ -27,9 +42,27 @@
       background: var(--custom-module-bg); 
       padding: 10px;
       border-radius: 4px;
+      gap: 15px; /* Adiciona espaço entre os itens da barra */
     }
 
-    /* ---- NOVOS ESTILOS PARA A TABELA ---- */
+    /* ---- NOVO: Estilos do Campo de Pesquisa ---- */
+    .search-wrapper {
+      flex-grow: 1; /* Faz a pesquisa ocupar o espaço disponível */
+      text-align: center;
+    }
+
+    #search-input {
+      width: 60%; /* Ocupa 60% do espaço disponível */
+      padding: 8px 10px;
+      border: 1px solid var(--custom-border-color);
+      border-radius: 4px;
+      /* Usa as cores do tema para fundo e texto */
+      background-color: var(--custom-body-bg); 
+      color: var(--body-fg); 
+      box-sizing: border-box; /* Garante que o padding não quebre o layout */
+    }
+    /* ---- FIM DOS NOVOS ESTILOS ---- */
+    
     .table-container {
       max-height: 50vh;
       overflow-y: auto;
@@ -56,29 +89,26 @@
       z-index: 1;
     }
     
-    /* Estilo para cabeçalhos clicáveis */
     #results-table th[data-key] {
       cursor: pointer;
       user-select: none;
     }
 
-    /* Setas de Ordenação */
     #results-table th[data-key]::after {
-      content: ' \25B2\25BC'; /* Símbolos de seta para cima e para baixo */
+      content: ' \25B2\25BC';
       color: var(--custom-border-color);
       opacity: 0.5;
     }
     #results-table th[data-sort-dir="asc"]::after {
-      content: ' \25B2'; /* Seta para cima */
+      content: ' \25B2';
       opacity: 1;
       color: var(--custom-header-link-color);
     }
     #results-table th[data-sort-dir="desc"]::after {
-      content: ' \25BC'; /* Seta para baixo */
+      content: ' \25BC';
       opacity: 1;
       color: var(--custom-header-link-color);
     }
-    /* ---- FIM DOS ESTILOS DA TABELA ---- */
     
     .loader {
       display: none;
@@ -105,6 +135,7 @@
 {% endblock %}
 
 {% block content %}
+<h1>{{ title }}</h1>
 
 <p>Selecione um tipo de ativo para carregar os itens. Em seguida, selecione os itens que deseja imprimir.</p>
 
@@ -120,24 +151,27 @@
 
 <div class="controls-bar">
   <button id="print-button" class="button" disabled>Imprimir Selecionados</button>
+  
+  <div class="search-wrapper">
+    <input type="search" id="search-input" placeholder="Filtrar por nome do ativo...">
+  </div>
+  
   <div class="loader" id="loader"></div>
+  
   <div>
     <input type="checkbox" id="select-all" style="margin-right: 5px;">
     <label for="select-all">Marcar/Desmarcar Todos</label>
   </div>
 </div>
-
 <div class="table-container">
   <table id="results-table">
     <thead>
       <tr>
         <th style="width: 20px;"></th>
-        
         <th data-key="asset_name">Nome do Ativo</th>
-        <th data-key="entity">Entidade / Local</th>
+        <th data-key="entity">Entidade</th>
         <th data-key="asset_type">Tipo</th>
-        
-        </tr>
+      </tr>
     </thead>
     <tbody id="results-body">
       <tr>
@@ -148,6 +182,7 @@
     </tbody>
   </table>
 </div>
+
 <div id="print-message"></div>
 
 <script>
@@ -159,16 +194,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectAllCheckbox = document.getElementById('select-all');
     const loader = document.getElementById('loader');
     const printMessage = document.getElementById('print-message');
-    const resultsBody = document.getElementById('results-body'); // Agora é o <tbody>
-    const headers = document.querySelectorAll('#results-table th[data-key]'); // Cabeçalhos ordenáveis
+    const resultsBody = document.getElementById('results-body');
+    const headers = document.querySelectorAll('#results-table th[data-key]');
     
+    // ---- NOVO: Referência ao campo de pesquisa ----
+    const searchInput = document.getElementById('search-input');
+
     // --- URLs ---
     const dataApiUrl = "/api/get-assets/";
     const printApiUrl = '/api/imprimir/'; 
 
     // --- Variáveis de Estado ---
     let fetchedAssets = []; // Armazena os dados brutos da API
-    let currentSort = { key: 'asset_name', dir: 'asc' }; // Ordenação inicial
+    let currentSort = { key: 'asset_name', dir: 'asc' };
 
     // --- Função para buscar o Token CSRF ---
     function getCsrfToken() {
@@ -178,71 +216,96 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- 1. Ação dos Botões de Filtro ---
+    // --- 1. Ação dos Botões de Filtro ---
     filterButtons.forEach(button => {
         button.addEventListener('click', () => {
+            
+            // ---- INÍCIO DA MUDANÇA ----
+            // 1. Remove a classe 'active' de TODOS os botões
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            // 2. Adiciona a classe 'active' apenas ao botão que foi clicado
+            button.classList.add('active');
+            // ---- FIM DA MUDANÇA ----
+
             const assetType = button.dataset.type;
             fetchAssets(assetType);
         });
     });
 
     async function fetchAssets(assetType) {
-        resultsBody.innerHTML = ''; // Limpa a tabela
+        resultsBody.innerHTML = ''; 
         printButton.disabled = true;
         selectAllCheckbox.checked = false;
         loader.style.display = 'block';
         printMessage.innerText = '';
+        
+        // ---- NOVO: Limpa o campo de pesquisa ao trocar de tipo ----
+        searchInput.value = ''; 
+        
         fetchedAssets = []; // Limpa dados antigos
 
         try {
             const response = await fetch(`${dataApiUrl}?type=${assetType}`);
-            if (!response.ok) {
-                throw new Error(`Erro na API: ${response.statusText}`);
-            }
-            const assets = await response.json();
+            if (!response.ok) throw new Error(`Erro na API: ${response.statusText}`);
             
-            if (assets.length === 0) {
-                resultsBody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">Nenhum item encontrado.</td></tr>';
-                return;
-            }
-
+            const assets = await response.json();
             fetchedAssets = assets; // Salva os dados brutos
-            sortAndRender(); // Ordena e renderiza a tabela
+            
+            // ---- MUDANÇA: Função centralizada para renderizar ----
+            applyFiltersAndSort(); 
 
         } catch (error) {
-            resultsBody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--custom-error-fg); padding: 20px;">Erro ao carregar dados: ${error.message}</td></tr>`;
+            fetchedAssets = []; // Garante que a lista esteja vazia
+            applyFiltersAndSort(); // Renderiza a mensagem de erro/vazio
             console.error(error);
         } finally {
             loader.style.display = 'none';
         }
     }
 
-    // --- 2. Lógica de Ordenação ---
-    
-    // Adiciona o 'click' em cada cabeçalho
+    // --- 2. Lógica de Ordenação (Evento de clique) ---
     headers.forEach(header => {
         header.addEventListener('click', () => {
             const key = header.dataset.key;
             let newDir = 'asc';
             
-            // Se já estava ordenando por esta coluna, inverte a direção
             if (currentSort.key === key && currentSort.dir === 'asc') {
                 newDir = 'desc';
             }
             
             currentSort = { key: key, dir: newDir };
-            sortAndRender(); // Re-ordena e re-renderiza
+            applyFiltersAndSort(); // Re-filtra, re-ordena e re-renderiza
         });
     });
 
-    function sortAndRender() {
-        const { key, dir } = currentSort;
+    // --- 3. NOVO: Lógica de Filtro (Evento de digitação) ---
+    searchInput.addEventListener('input', () => {
+        // A cada tecla digitada, re-filtra, re-ordena e re-renderiza
+        applyFiltersAndSort();
+    });
 
-        // Ordena a lista de ativos
-        const sortedAssets = [...fetchedAssets].sort((a, b) => {
+    // --- 4. NOVO: Função Central de Filtro, Ordenação e Renderização ---
+    function applyFiltersAndSort() {
+        
+        // --- ETAPA DE FILTRO ---
+        const searchTerm = searchInput.value.toLowerCase();
+        let processedAssets = fetchedAssets;
+
+        if (searchTerm) {
+            processedAssets = fetchedAssets.filter(asset => {
+                // Filtra pelo nome do ativo (asset_name)
+                return asset.asset_name.toLowerCase().includes(searchTerm);
+            });
+        }
+
+        // --- ETAPA DE ORDENAÇÃO ---
+        const { key, dir } = currentSort;
+        
+        const sortedAssets = [...processedAssets].sort((a, b) => {
             let valA = a[key] ? a[key].toString().toLowerCase() : '';
             let valB = b[key] ? b[key].toString().toLowerCase() : '';
 
-            // Tenta ordenar numericamente se parecer um número (ex: ID)
+            // Tenta ordenar numericamente
             const numA = parseFloat(valA);
             const numB = parseFloat(valB);
             
@@ -251,37 +314,46 @@ document.addEventListener('DOMContentLoaded', () => {
                 valB = numB;
             }
 
-            // Lógica de comparação
-            if (valA < valB) {
-                return dir === 'asc' ? -1 : 1;
-            }
-            if (valA > valB) {
-                return dir === 'asc' ? 1 : -1;
-            }
-            return 0; // são iguais
+            if (valA < valB) return dir === 'asc' ? -1 : 1;
+            if (valA > valB) return dir === 'asc' ? 1 : -1;
+            return 0;
         });
 
         // Atualiza os indicadores visuais nos cabeçalhos
         headers.forEach(h => {
-            if (h.dataset.key === key) {
-                h.dataset.sortDir = dir;
-            } else {
-                h.dataset.sortDir = ''; // Limpa outros
-            }
+            if (h.dataset.key === key) h.dataset.sortDir = dir;
+            else h.dataset.sortDir = '';
         });
 
-        renderTable(sortedAssets); // Renderiza a tabela com os dados ordenados
+        // --- ETAPA DE RENDERIZAÇÃO ---
+        renderTable(sortedAssets); // Renderiza a lista final
     }
 
-    // --- 3. Lógica de Renderização da Tabela ---
+    // --- 5. Lógica de Renderização da Tabela (Atualizada) ---
+    // (A antiga 'sortAndRender' foi dividida)
     function renderTable(assetsToRender) {
         resultsBody.innerHTML = ''; // Limpa a tabela
         
+        // ---- Lógica de "Nenhum resultado" melhorada ----
+        if (assetsToRender.length === 0) {
+            const searchTerm = searchInput.value;
+            if (searchTerm) {
+                // Caso 1: Filtrou e não achou nada
+                resultsBody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 20px;">Nenhum item corresponde ao filtro "<b>${searchTerm}</b>".</td></tr>`;
+            } else if (fetchedAssets.length > 0) {
+                 // Caso 2: Deveria ter itens, mas o filtro limpou (nunca deve acontecer, mas é seguro)
+                 resultsBody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 20px;">Nenhum item corresponde ao filtro.</td></tr>`;
+            } else {
+                // Caso 3: A API não retornou nada
+                resultsBody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 20px;">Nenhum item encontrado para este tipo de ativo.</td></tr>`;
+            }
+            return; // Para a execução
+        }
+        
+        // Constrói as linhas da tabela
         assetsToRender.forEach(asset => {
             const tr = document.createElement('tr');
             
-            // Armazena os dados para impressão no próprio <tr>
-            // A API de impressão espera 'titulo' e 'url'
             tr.dataset.titulo = asset.asset_name; 
             tr.dataset.url = asset.url;
 
@@ -312,30 +384,29 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- 4. Ação do "Marcar Todos" (Atualizado) ---
+    // --- 6. Ação do "Marcar Todos" (Sem mudança) ---
     selectAllCheckbox.addEventListener('change', () => {
-        const checkboxes = resultsBody.querySelectorAll('.asset-checkbox'); // <--- MUDOU
+        const checkboxes = resultsBody.querySelectorAll('.asset-checkbox');
         checkboxes.forEach(cb => {
             cb.checked = selectAllCheckbox.checked;
         });
         updatePrintButtonState();
     });
 
-    // --- 5. Ação do Botão Imprimir (Atualizado) ---
+    // --- 7. Ação do Botão Imprimir (Sem mudança) ---
     printButton.addEventListener('click', () => {
         sendToPrintAPI();
     });
 
     async function sendToPrintAPI() {
         const selectedItems = [];
-        // Busca checkboxes marcados dentro do <tbody>
-        const checkedCheckboxes = resultsBody.querySelectorAll('.asset-checkbox:checked'); // <--- MUDOU
+        const checkedCheckboxes = resultsBody.querySelectorAll('.asset-checkbox:checked');
 
         checkedCheckboxes.forEach(cb => {
-            const tr = cb.closest('tr'); // <--- MUDOU de 'li' para 'tr'
+            const tr = cb.closest('tr');
             selectedItems.push({
-                titulo: tr.dataset.titulo, // Pega o dado do <tr>
-                url: tr.dataset.url      // Pega o dado do <tr>
+                titulo: tr.dataset.titulo,
+                url: tr.dataset.url
             });
         });
 
@@ -379,15 +450,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 6. Habilitar/Desabilitar Botão de Impressão (Atualizado) ---
-    resultsBody.addEventListener('change', (event) => { // <--- MUDOU (ouve o <tbody>)
+    // --- 8. Habilitar/Desabilitar Botão de Impressão (Sem mudança) ---
+    resultsBody.addEventListener('change', (event) => {
         if (event.target.classList.contains('asset-checkbox')) {
             updatePrintButtonState();
         }
     });
 
     function updatePrintButtonState() {
-        const anyChecked = resultsBody.querySelector('.asset-checkbox:checked'); // <--- MUDOU
+        const anyChecked = resultsBody.querySelector('.asset-checkbox:checked');
         printButton.disabled = !anyChecked;
     }
 });
