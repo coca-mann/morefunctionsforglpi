@@ -84,10 +84,5 @@ def get_assets_data_api(request):
         return HttpResponseBadRequest("Parâmetro 'type' é obrigatório.")
 
     assets = get_assets_for_printing(asset_type)
-    
-    data_for_frontend = [
-        {"titulo": item['asset_name'], "url": item['url']}
-        for item in assets
-    ]
 
-    return JsonResponse(data_for_frontend, safe=False)
+    return JsonResponse(assets, safe=False)

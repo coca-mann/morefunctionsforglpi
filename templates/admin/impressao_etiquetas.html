@@ -2,140 +2,173 @@
 {% load static %}
 
 {% block extrastyle %}
-{{ block.super }}
-<style>
+  {{ block.super }}
+  <style>
     /* Cores padrão do Admin */
     :root {
-        /* AQUI ESTAVA O ERRO: 
-        Estava '--module-lg' (errado)
-        Agora é '--module-bg' (correto)
-        */
-        --custom-module-bg: var(--module-bg, #f0f0f0); 
-        
-        --custom-body-bg: var(--body-bg, #f9f9f9);
-        --custom-border-color: var(--border-color, #ccc);
-        --custom-error-fg: var(--error-fg, #ba2121);
-        --custom-success-fg: var(--success-fg, #41763b);
+      --custom-module-bg: var(--body-bg, #f0f0f0);
+      --custom-body-bg: var(--body-bg, #f9f9f9);
+      --custom-border-color: var(--border-color, #ccc);
+      --custom-error-fg: var(--error-fg, #ba2121);
+      --custom-success-fg: var(--success-fg, #41763b);
+      --custom-header-link-color: var(--header-link-color, #3498db);
     }
-
+  
     .asset-filters button {
-        margin-right: 5px;
-        margin-bottom: 10px;
-    }
-    
-    #results-list {
-        list-style-type: none;
-        padding-left: 0;
-        max-height: 50vh;
-        overflow-y: auto;
-        border: 1px solid var(--custom-border-color);
-        padding: 10px;
-        background: var(--custom-body-bg);
-        border-radius: 4px;
-    }
-    #results-list li {
-        padding: 8px;
-        border-bottom: 1px solid var(--custom-border-color);
-    }
-    #results-list li:last-child {
-        border-bottom: none;
-    }
-    #results-list li input {
-        margin-right: 10px;
-    }
-    #results-list li label {
-        display: inline-block;
-        cursor: pointer;
+      margin-right: 5px;
+      margin-bottom: 10px;
     }
     
     .controls-bar {
-        display: flex; 
-        justify-content: space-between; 
-        align-items: center; 
-        margin-bottom: 10px;
-        /* Esta linha agora usará a variável correta */
-        background: var(--custom-module-bg); 
-        padding: 10px;
-        border-radius: 4px;
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      margin-bottom: 10px;
+      background: var(--custom-module-bg); 
+      padding: 10px;
+      border-radius: 4px;
+    }
+
+    /* ---- NOVOS ESTILOS PARA A TABELA ---- */
+    .table-container {
+      max-height: 50vh;
+      overflow-y: auto;
+      border: 1px solid var(--custom-border-color);
+      border-radius: 4px;
+      background: var(--custom-body-bg);
     }
     
+    #results-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    #results-table th, #results-table td {
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid var(--custom-border-color);
+    }
+    
+    #results-table th {
+      background: var(--custom-module-bg);
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    
+    /* Estilo para cabeçalhos clicáveis */
+    #results-table th[data-key] {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    /* Setas de Ordenação */
+    #results-table th[data-key]::after {
+      content: ' \25B2\25BC'; /* Símbolos de seta para cima e para baixo */
+      color: var(--custom-border-color);
+      opacity: 0.5;
+    }
+    #results-table th[data-sort-dir="asc"]::after {
+      content: ' \25B2'; /* Seta para cima */
+      opacity: 1;
+      color: var(--custom-header-link-color);
+    }
+    #results-table th[data-sort-dir="desc"]::after {
+      content: ' \25BC'; /* Seta para baixo */
+      opacity: 1;
+      color: var(--custom-header-link-color);
+    }
+    /* ---- FIM DOS ESTILOS DA TABELA ---- */
+    
     .loader {
-        display: none;
-        /* Esta linha também usará a variável correta */
-        border: 4px solid var(--custom-module-bg);
-        border-radius: 50%;
-        border-top: 4px solid var(--header-link-color, #3498db);
-        width: 20px;
-        height: 20px;
-        animation: spin 1s linear infinite;
+      display: none;
+      border: 4px solid var(--custom-module-bg);
+      border-radius: 50%;
+      border-top: 4px solid var(--custom-header-link-color);
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
     }
     
     #print-message {
-        margin-top: 10px;
-        font-weight: bold;
+      margin-top: 10px;
+      font-weight: bold;
     }
-    #print-message.success {
-        color: var(--custom-success-fg);
-    }
-    #print-message.error {
-        color: var(--custom-error-fg);
-    }
+    #print-message.success { color: var(--custom-success-fg); }
+    #print-message.error { color: var(--custom-error-fg); }
 
     @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
-    </style>
+  </style>
 {% endblock %}
 
-
 {% block content %}
-<h1>{{ title }}</h1>
 
 <p>Selecione um tipo de ativo para carregar os itens. Em seguida, selecione os itens que deseja imprimir.</p>
 
 <div class="asset-filters">
-    {% for asset_value, asset_name in tipos_de_ativos_display %}
-        <button class="button" data-type="{{ asset_value }}">
-            {{ asset_name }}
-        </button>
-    {% endfor %}
+  {% for asset_value, asset_name in tipos_de_ativos_display %}
+    <button class="button" data-type="{{ asset_value }}">
+      {{ asset_name }}
+    </button>
+  {% endfor %}
 </div>
 
 <hr>
 
 <div class="controls-bar">
   <button id="print-button" class="button" disabled>Imprimir Selecionados</button>
-  
   <div class="loader" id="loader"></div>
-  
   <div>
     <input type="checkbox" id="select-all" style="margin-right: 5px;">
     <label for="select-all">Marcar/Desmarcar Todos</label>
   </div>
 </div>
 
-<ul id="results-list">
-  <li id="list-placeholder">Selecione um tipo de ativo acima.</li>
-</ul>
-
+<div class="table-container">
+  <table id="results-table">
+    <thead>
+      <tr>
+        <th style="width: 20px;"></th>
+        
+        <th data-key="asset_name">Nome do Ativo</th>
+        <th data-key="entity">Entidade / Local</th>
+        <th data-key="asset_type">Tipo</th>
+        
+        </tr>
+    </thead>
+    <tbody id="results-body">
+      <tr>
+        <td colspan="4" style="text-align: center; padding: 20px;">
+          Selecione um tipo de ativo acima.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
 <div id="print-message"></div>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     
+    // --- Referências aos elementos ---
     const filterButtons = document.querySelectorAll('.asset-filters button');
-    const resultsList = document.getElementById('results-list');
-    const listPlaceholder = document.getElementById('list-placeholder');
     const printButton = document.getElementById('print-button');
     const selectAllCheckbox = document.getElementById('select-all');
     const loader = document.getElementById('loader');
     const printMessage = document.getElementById('print-message');
-
-    // URLs
+    const resultsBody = document.getElementById('results-body'); // Agora é o <tbody>
+    const headers = document.querySelectorAll('#results-table th[data-key]'); // Cabeçalhos ordenáveis
+    
+    // --- URLs ---
     const dataApiUrl = "/api/get-assets/";
-    // Usa o caminho fixo para a API de impressão, como solicitado
     const printApiUrl = '/api/imprimir/'; 
+
+    // --- Variáveis de Estado ---
+    let fetchedAssets = []; // Armazena os dados brutos da API
+    let currentSort = { key: 'asset_name', dir: 'asc' }; // Ordenação inicial
 
     // --- Função para buscar o Token CSRF ---
     function getCsrfToken() {
@@ -153,81 +186,156 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     async function fetchAssets(assetType) {
-        resultsList.innerHTML = ''; // Limpa a lista
+        resultsBody.innerHTML = ''; // Limpa a tabela
         printButton.disabled = true;
         selectAllCheckbox.checked = false;
-        loader.style.display = 'block'; // Mostra o loader
+        loader.style.display = 'block';
         printMessage.innerText = '';
-        if (listPlaceholder) listPlaceholder.remove();
+        fetchedAssets = []; // Limpa dados antigos
 
         try {
             const response = await fetch(`${dataApiUrl}?type=${assetType}`);
             if (!response.ok) {
                 throw new Error(`Erro na API: ${response.statusText}`);
             }
-            const assets = await response.json(); // assets já vêm como [{"titulo": ..., "url": ...}]
-
+            const assets = await response.json();
+            
             if (assets.length === 0) {
-                resultsList.innerHTML = '<li>Nenhum item encontrado.</li>';
+                resultsBody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">Nenhum item encontrado.</td></tr>';
                 return;
             }
 
-            // Popula a lista com os resultados
-            assets.forEach(asset => {
-                const li = document.createElement('li');
-                
-                // Armazena os dados no próprio elemento (esta é a lista temporária)
-                li.dataset.titulo = asset.titulo;
-                li.dataset.url = asset.url;
-
-                // Cria o checkbox e o label
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.className = 'asset-checkbox';
-                checkbox.id = `asset-${asset.url}`; // ID único
-                
-                const label = document.createElement('label');
-                label.htmlFor = checkbox.id;
-                label.textContent = asset.titulo;
-
-                li.appendChild(checkbox);
-                li.appendChild(label);
-                resultsList.appendChild(li);
-            });
+            fetchedAssets = assets; // Salva os dados brutos
+            sortAndRender(); // Ordena e renderiza a tabela
 
         } catch (error) {
-            resultsList.innerHTML = `<li>Erro ao carregar dados: ${error.message}</li>`;
+            resultsBody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--custom-error-fg); padding: 20px;">Erro ao carregar dados: ${error.message}</td></tr>`;
             console.error(error);
         } finally {
-            loader.style.display = 'none'; // Esconde o loader
+            loader.style.display = 'none';
         }
     }
 
-    // --- 2. Ação do "Marcar Todos" ---
+    // --- 2. Lógica de Ordenação ---
+    
+    // Adiciona o 'click' em cada cabeçalho
+    headers.forEach(header => {
+        header.addEventListener('click', () => {
+            const key = header.dataset.key;
+            let newDir = 'asc';
+            
+            // Se já estava ordenando por esta coluna, inverte a direção
+            if (currentSort.key === key && currentSort.dir === 'asc') {
+                newDir = 'desc';
+            }
+            
+            currentSort = { key: key, dir: newDir };
+            sortAndRender(); // Re-ordena e re-renderiza
+        });
+    });
+
+    function sortAndRender() {
+        const { key, dir } = currentSort;
+
+        // Ordena a lista de ativos
+        const sortedAssets = [...fetchedAssets].sort((a, b) => {
+            let valA = a[key] ? a[key].toString().toLowerCase() : '';
+            let valB = b[key] ? b[key].toString().toLowerCase() : '';
+
+            // Tenta ordenar numericamente se parecer um número (ex: ID)
+            const numA = parseFloat(valA);
+            const numB = parseFloat(valB);
+            
+            if (!isNaN(numA) && !isNaN(numB)) {
+                valA = numA;
+                valB = numB;
+            }
+
+            // Lógica de comparação
+            if (valA < valB) {
+                return dir === 'asc' ? -1 : 1;
+            }
+            if (valA > valB) {
+                return dir === 'asc' ? 1 : -1;
+            }
+            return 0; // são iguais
+        });
+
+        // Atualiza os indicadores visuais nos cabeçalhos
+        headers.forEach(h => {
+            if (h.dataset.key === key) {
+                h.dataset.sortDir = dir;
+            } else {
+                h.dataset.sortDir = ''; // Limpa outros
+            }
+        });
+
+        renderTable(sortedAssets); // Renderiza a tabela com os dados ordenados
+    }
+
+    // --- 3. Lógica de Renderização da Tabela ---
+    function renderTable(assetsToRender) {
+        resultsBody.innerHTML = ''; // Limpa a tabela
+        
+        assetsToRender.forEach(asset => {
+            const tr = document.createElement('tr');
+            
+            // Armazena os dados para impressão no próprio <tr>
+            // A API de impressão espera 'titulo' e 'url'
+            tr.dataset.titulo = asset.asset_name; 
+            tr.dataset.url = asset.url;
+
+            // Coluna 1: Checkbox
+            const tdCheck = document.createElement('td');
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'asset-checkbox';
+            tdCheck.appendChild(checkbox);
+            tr.appendChild(tdCheck);
+
+            // Coluna 2: Nome do Ativo
+            const tdName = document.createElement('td');
+            tdName.textContent = asset.asset_name;
+            tr.appendChild(tdName);
+
+            // Coluna 3: Entidade
+            const tdEntity = document.createElement('td');
+            tdEntity.textContent = asset.entity;
+            tr.appendChild(tdEntity);
+
+            // Coluna 4: Tipo de Ativo
+            const tdType = document.createElement('td');
+            tdType.textContent = asset.asset_type;
+            tr.appendChild(tdType);
+
+            resultsBody.appendChild(tr);
+        });
+    }
+
+    // --- 4. Ação do "Marcar Todos" (Atualizado) ---
     selectAllCheckbox.addEventListener('change', () => {
-        const checkboxes = resultsList.querySelectorAll('.asset-checkbox');
+        const checkboxes = resultsBody.querySelectorAll('.asset-checkbox'); // <--- MUDOU
         checkboxes.forEach(cb => {
             cb.checked = selectAllCheckbox.checked;
         });
         updatePrintButtonState();
     });
 
-    // --- 3. Ação do Botão Imprimir ---
+    // --- 5. Ação do Botão Imprimir (Atualizado) ---
     printButton.addEventListener('click', () => {
         sendToPrintAPI();
     });
 
     async function sendToPrintAPI() {
         const selectedItems = [];
-        // Busca somente os checkboxes marcados
-        const checkedCheckboxes = resultsList.querySelectorAll('.asset-checkbox:checked');
+        // Busca checkboxes marcados dentro do <tbody>
+        const checkedCheckboxes = resultsBody.querySelectorAll('.asset-checkbox:checked'); // <--- MUDOU
 
         checkedCheckboxes.forEach(cb => {
-            const li = cb.closest('li'); // Pega o <li> pai
-            // Lê os dados armazenados no <li>
+            const tr = cb.closest('tr'); // <--- MUDOU de 'li' para 'tr'
             selectedItems.push({
-                titulo: li.dataset.titulo,
-                url: li.dataset.url
+                titulo: tr.dataset.titulo, // Pega o dado do <tr>
+                url: tr.dataset.url      // Pega o dado do <tr>
             });
         });
 
@@ -239,50 +347,47 @@ document.addEventListener('DOMContentLoaded', () => {
         printButton.disabled = true;
         printButton.innerText = 'Enviando...';
         printMessage.innerText = '';
+        printMessage.className = '';
 
         try {
             const response = await fetch(printApiUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': getCsrfToken() // Essencial para o POST no Django
+                    'X-CSRFToken': getCsrfToken()
                 },
-                body: JSON.stringify(selectedItems) // Envia o JSON no formato exato
+                body: JSON.stringify(selectedItems)
             });
-
             const result = await response.json();
 
             if (response.ok) {
-                printMessage.style.color = 'green';
+                printMessage.className = 'success';
                 printMessage.innerText = `Sucesso! ${result.message || 'Itens enviados.'}`;
-                // Limpa a seleção
                 checkedCheckboxes.forEach(cb => cb.checked = false);
                 selectAllCheckbox.checked = false;
                 updatePrintButtonState();
             } else {
-                throw new Error(result.message || 'Erro desconhecido no endpoint de impressão');
+                throw new Error(result.message || 'Erro desconhecido');
             }
 
         } catch (error) {
-            printMessage.style.color = 'red';
+            printMessage.className = 'error';
             printMessage.innerText = `Erro ao imprimir: ${error.message}`;
-            console.error(error);
         } finally {
-            printButton.disabled = false; // Reabilita o botão mesmo em caso de erro
+            printButton.disabled = false;
             printButton.innerText = 'Imprimir Selecionados';
         }
     }
 
-    // --- 4. Habilitar/Desabilitar Botão de Impressão ---
-    // Ouve cliques na lista inteira (event delegation)
-    resultsList.addEventListener('change', (event) => {
+    // --- 6. Habilitar/Desabilitar Botão de Impressão (Atualizado) ---
+    resultsBody.addEventListener('change', (event) => { // <--- MUDOU (ouve o <tbody>)
         if (event.target.classList.contains('asset-checkbox')) {
             updatePrintButtonState();
         }
     });
 
     function updatePrintButtonState() {
-        const anyChecked = resultsList.querySelector('.asset-checkbox:checked');
+        const anyChecked = resultsBody.querySelector('.asset-checkbox:checked'); // <--- MUDOU
         printButton.disabled = !anyChecked;
     }
 });
