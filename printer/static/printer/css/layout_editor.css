@@ -47,11 +47,41 @@
 /* --- ESTILOS DE TEXTO (MODIFICADOS) --- */
 .label-element[data-type="text"] {
     color: #000;
+    
+    /* --- NOVOS ESTILOS DE ALINHAMENTO --- */
+    /* Usa flexbox para alinhamento vertical e horizontal */
+    display: flex;
+    /* Alinhamento Horizontal (padrão: esquerda) */
+    justify-content: flex-start;
+    text-align: left;
+    /* Alinhamento Vertical (padrão: topo) */
+    align-items: flex-start;
+    /* --- FIM DOS NOVOS ESTILOS --- */
+
     /* Padrão: linha única com ellipsis */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
+/* --- NOVAS CLASSES DE ALINHAMENTO --- */
+/* Horizontal */
+.label-element[data-text-align="center"] {
+    justify-content: center;
+    text-align: center;
+}
+.label-element[data-text-align="right"] {
+    justify-content: flex-end;
+    text-align: right;
+}
+/* Vertical */
+.label-element[data-text-valign="middle"] {
+    align-items: center;
+}
+.label-element[data-text-valign="bottom"] {
+    align-items: flex-end;
+}
+/* --- FIM DAS NOVAS CLASSES --- */
 /* Se a quebra de linha estiver ATIVA */
 .label-element[data-type="text"].allow-wrap {
     white-space: normal;

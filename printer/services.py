@@ -12,6 +12,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import Paragraph
 from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
 import qrcode
 from PIL import Image
 
@@ -96,8 +97,6 @@ def gerar_e_imprimir_etiquetas(lista_de_etiquetas: list):
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=(LARGURA_ETIQUETA, ALTURA_ETIQUETA))
 
-    print(f"Gerando {len(lista_de_etiquetas)} etiqueta(s) com o layout '{layout.nome}'...")
-    
     elementos_layout = layout.layout_json
     if not elementos_layout:
         return (False, f"O layout '{layout.nome}' está vazio. Adicione elementos no editor do admin.")
@@ -112,9 +111,9 @@ def gerar_e_imprimir_etiquetas(lista_de_etiquetas: list):
             el_y_editor = elemento.get('y', 0) * mm
             
             if elemento.get('type') == 'text':
+                # --- INÍCIO DA CORREÇÃO (Lógica de Texto Unificada) ---
                 el_w = elemento.get('width', 40) * mm
                 el_h = elemento.get('height', 8) * mm
-                # Coordenada Y (bottom-left) da CAIXA do elemento
                 el_y = ALTURA_ETIQUETA - el_y_editor - el_h
                 
                 data_key = elemento.get('data_source', 'titulo')
@@ -130,48 +129,19 @@ def gerar_e_imprimir_etiquetas(lista_de_etiquetas: list):
                 fonte = layout.nome_fonte_reportlab
                 tamanho_fonte = elemento.get('font_size', 12)
                 
+                text_align = elemento.get('text_align', 'left')
+                text_valign = elemento.get('text_valign', 'top')
+                allow_wrap = elemento.get('allow_wrap', False)
+                
                 # Desenha o fundo (se houver)
                 if cor_fundo:
                     c.setFillColor(cor_fundo)
                     c.rect(el_x, el_y, el_w, el_h, stroke=0, fill=1)
-                
-                # --- LÓGICA DE QUEBRA DE LINHA (NOVO) ---
-                allow_wrap = elemento.get('allow_wrap', False)
-                
-                if allow_wrap:
-                    # Usa Paragraph para quebra de linha
-                    style = ParagraphStyle(
-                        'label_text_wrap',
-                        fontName=fonte,
-                        fontSize=tamanho_fonte,
-                        textColor=cor_texto,
-                        wordWrap='break', # Quebra palavras longas
-                    )
-                    p = Paragraph(texto, style)
-                    p.wrapOn(c, el_w, el_h)
-                    
-                    # Salva o estado do canvas
-                    c.saveState()
-                    # Cria um "caminho de corte" (clipping path)
-                    path = c.beginPath()
-                    path.rect(el_x, el_y, el_w, el_h)
-                    c.clipPath(path, stroke=0, fill=0)
-                    
-                    # Desenha o parágrafo (ele vai quebrar, mas será cortado pelo clip)
-                    p.drawOn(c, el_x, el_y)
-                    # Restaura o estado (remove o corte)
-                    c.restoreState()
-                    
-                else:
-                    # Usa drawString para linha única (lógica antiga com melhoria)
-                    c.setFillColor(cor_texto)
-                    c.setFont(fonte, tamanho_fonte)
-                    
-                    # Lógica de Ellipsis (...)
+
+                # 1. Truncar texto manualmente se a quebra de linha estiver DESATIVADA
+                if not allow_wrap:
                     text_width = pdfmetrics.stringWidth(texto, fonte, tamanho_fonte)
                     if text_width > el_w:
-                        # Trunca o texto e adiciona "..."
-                        # Esta é uma aproximação, mas funcional
                         try:
                             avg_char_width = text_width / len(texto)
                             max_chars = int(el_w / avg_char_width) - 3
@@ -179,13 +149,49 @@ def gerar_e_imprimir_etiquetas(lista_de_etiquetas: list):
                             texto = texto[:max_chars] + "..."
                         except ZeroDivisionError:
                             texto = "..."
+                
+                # 2. Definir Alinhamento Horizontal
+                if text_align == 'center': align_enum = TA_CENTER
+                elif text_align == 'right': align_enum = TA_RIGHT
+                else: align_enum = TA_LEFT
 
-                    # Centraliza verticalmente (aproximação)
-                    ajuste_vertical = (el_h - tamanho_fonte) / 2
-                    c.drawString(el_x, el_y + ajuste_vertical, texto)
-
+                # 3. Criar Estilo e Parágrafo
+                style = ParagraphStyle(
+                    'label_text_unified',
+                    fontName=fonte,
+                    fontSize=tamanho_fonte,
+                    textColor=cor_texto,
+                    wordWrap='break' if allow_wrap else 'clip', # 'clip' para linha única
+                    alignment=align_enum,
+                    leading=tamanho_fonte * 1.2 # Espaço entre linhas (para quebra)
+                )
+                p = Paragraph(texto, style)
+                
+                # 4. Calcular Alinhamento Vertical
+                (actual_w, actual_h) = p.wrapOn(c, el_w, el_h)
+                
+                y_offset = 0
+                if text_valign == 'middle':
+                    y_offset = (el_h - actual_h) / 2
+                elif text_valign == 'top':
+                    y_offset = el_h - actual_h
+                # 'bottom' (padrão) tem y_offset = 0
+                
+                # 5. Desenhar
+                c.saveState()
+                path = c.beginPath()
+                path.rect(el_x, el_y, el_w, el_h)
+                c.clipPath(path, stroke=0, fill=0)
+                
+                # *** A CORREÇÃO PRINCIPAL ***
+                # Desenha o parágrafo na posição X, com o ajuste Y vertical
+                p.drawOn(c, el_x, el_y + y_offset)
+                c.restoreState()
+                
+                # --- FIM DA CORREÇÃO ---
             
             elif elemento.get('type') == 'qrcode':
+                # --- Lógica de QR Code (Sem mudança) ---
                 el_size = elemento.get('size', 25) * mm
                 el_y = ALTURA_ETIQUETA - el_y_editor - el_size
                 
@@ -193,25 +199,16 @@ def gerar_e_imprimir_etiquetas(lista_de_etiquetas: list):
                 if data_key == 'custom':
                     data_to_encode = elemento.get('custom_text', '')
                 else:
-                    # Pega de 'dados_etiqueta' (ex: 'url' ou 'titulo')
-                    data_to_encode = dados_etiqueta.get(data_key, '')
-
-                # --- LÓGICA DE QR INVERTIDO (NOVO) ---
+                    data_to_encode = dados_etiqueta.get(data_key, '') 
+                
                 has_background = elemento.get('has_background', False)
                 fill_color = "white" if has_background else "black"
                 back_color = "black" if has_background else "white"
 
-                # Geração do QR Code
                 qr_maker = qrcode.QRCode(version=None, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=0)
-                
-                # Usa a variável correta
                 qr_maker.add_data(data_to_encode) 
-                
                 qr_maker.make(fit=True)
-                
-                # Usa as cores corretas
                 qr_img = qr_maker.make_image(fill_color=fill_color, back_color=back_color).convert("RGB")
-                
                 c.drawInlineImage(qr_img, el_x, el_y, width=el_size, height=el_size)
         
         c.showPage()
@@ -221,9 +218,6 @@ def gerar_e_imprimir_etiquetas(lista_de_etiquetas: list):
     buffer.seek(0)
     pdf_bytes = buffer.getvalue()
     buffer.close()
-    
-    # O resto da sua função (criar tempfile, chamar 'imprimir_pdf_na_impressora_padrao')
-    # continua EXATAMENTE IGUAL.
     
     arquivo_temporario = None
     try:

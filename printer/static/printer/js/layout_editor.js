@@ -6,23 +6,29 @@ window.addEventListener('DOMContentLoaded', () => {
     const form = document.querySelector('#content-main form');
     const widthField = document.getElementById('id_largura_mm');
     const heightField = document.getElementById('id_altura_mm');
-    const jsonField = document.getElementById('id_layout_json'); // Agora deve funcionar
+    const jsonField = document.getElementById('id_layout_json'); 
     const addTextBtn = document.getElementById('add-text-btn');
     const addQrBtn = document.getElementById('add-qr-btn');
     const removeElementBtn = document.getElementById('remove-element-btn');
+    
+    // Referências do painel
     const propDataSource = document.getElementById('prop-data-source');
     const propCustomTextWrapper = document.getElementById('custom-text-wrapper');
     const propCustomText = document.getElementById('prop-custom-text');
-    const propFontSizeWrapper = document.getElementById('font-size-wrapper');
+    const propBackground = document.getElementById('prop-background');
+    
+    // Propriedades de Texto
+    const textProperties = document.getElementById('text-properties');
     const propFontSize = document.getElementById('prop-font-size');
     const propFontWeight = document.getElementById('prop-font-weight');
-    const propBackground = document.getElementById('prop-background');
-
-    const propFontWeightWrapper = document.getElementById('font-weight-wrapper');
-    
-    const propWrapTextWrapper = document.getElementById('wrap-text-wrapper');
     const propWrapText = document.getElementById('prop-wrap-text');
-
+    
+    // --- NOVAS REFERÊNCIAS (ALINHAMENTO) ---
+    const propTextAlignWrapper = document.getElementById('text-align-wrapper');
+    const propTextAlign = document.getElementById('prop-text-align');
+    const propTextValignWrapper = document.getElementById('text-valign-wrapper');
+    const propTextValign = document.getElementById('prop-text-valign');
+    
     let selectedElement = null; 
     const PIXELS_PER_MM = 3.7795; 
     const ZOOM_FACTOR = 2.0; 
@@ -82,24 +88,28 @@ window.addEventListener('DOMContentLoaded', () => {
             const y_mm = parseFloat(el.dataset.y) / FINAL_RATIO;
             const width_px = parseFloat(el.style.width);
             const height_px = parseFloat(el.style.height);
-
             const elementData = {
                 id: el.id, type: el.dataset.type, x: x_mm, y: y_mm,
                 size: el.dataset.type === 'qrcode' ? (width_px / FINAL_RATIO) : undefined, 
                 width: el.dataset.type === 'text' ? (width_px / FINAL_RATIO) : undefined,
                 height: el.dataset.type === 'text' ? (height_px / FINAL_RATIO) : undefined,
+                
                 data_source: el.dataset.dataSource,
                 custom_text: el.dataset.customText,
+                has_background: el.classList.contains('has-background'),
+                
+                // Propriedades de Texto
                 font_size: parseInt(el.style.fontSize) || 12,
                 font_weight: el.style.fontWeight,
-                has_background: el.classList.contains('has-background'),
-                allow_wrap: el.dataset.allowWrap === 'true'
+                allow_wrap: el.dataset.allowWrap === 'true',
+
+                // --- SALVA AS NOVAS PROPRIEDADES ---
+                text_align: el.dataset.textAlign || 'left',
+                text_valign: el.dataset.textValign || 'top'
             };
             layoutData.push(elementData);
         });
-        
         jsonField.value = JSON.stringify(layoutData, null, 2);
-        console.log('Layout salvo no JSONField:', jsonField.value);
     }
     
     function createElement(config) {
@@ -122,7 +132,10 @@ window.addEventListener('DOMContentLoaded', () => {
         el.style.transform = `translate(${x_px}px, ${y_px}px)`;
         el.dataset.x = x_px;
         el.dataset.y = y_px;
-        config.allow_wrap = config.allow_wrap || false;
+
+        config.allow_wrap = config.allow_wrap || false; 
+        config.text_align = config.text_align || 'left';
+        config.text_valign = config.text_valign || 'top';
 
         updateElementVisuals(el, config);
         el.addEventListener('click', (e) => {
@@ -147,6 +160,9 @@ window.addEventListener('DOMContentLoaded', () => {
             } else {
                 el.classList.remove('allow-wrap');
             }
+
+            el.dataset.textAlign = config.text_align || 'left';
+            el.dataset.textValign = config.text_valign || 'top';
             
             // Texto de placeholder
             if (config.data_source === 'custom') {
@@ -179,19 +195,23 @@ window.addEventListener('DOMContentLoaded', () => {
         
         const isText = el.dataset.type === 'text';
 
-        // Preenche o painel
+        // Preenche campos comuns
         propDataSource.value = el.dataset.dataSource || 'titulo';
         propCustomText.value = el.dataset.customText || '';
         propBackground.checked = el.classList.contains('has-background');
         
-        // --- MOSTRA/ESCONDE CAMPOS DE TEXTO ---
-        propFontSize.value = parseInt(el.style.fontSize) || 12;
-        propFontWeight.checked = (el.style.fontWeight === 'bold');
-        propWrapText.checked = (el.dataset.allowWrap === 'true'); // <-- LÊ A FLAG
-
-        propFontSizeWrapper.style.display = isText ? 'block' : 'none';
-        propFontWeightWrapper.style.display = isText ? 'block' : 'none';
-        propWrapTextWrapper.style.display = isText ? 'block' : 'none'; // <-- MOSTRA/ESCONDE
+        // --- ATUALIZA O PREENCHIMENTO DO PAINEL ---
+        if (isText) {
+            textProperties.style.display = 'block';
+            propFontSize.value = parseInt(el.style.fontSize) || 12;
+            propFontWeight.checked = (el.style.fontWeight === 'bold');
+            propWrapText.checked = (el.dataset.allowWrap === 'true');
+            // Preenche os novos campos
+            propTextAlign.value = el.dataset.textAlign || 'left';
+            propTextValign.value = el.dataset.textValign || 'top';
+        } else {
+            textProperties.style.display = 'none';
+        }
         
         propCustomTextWrapper.style.display = (propDataSource.value === 'custom') ? 'block' : 'none';
     }
@@ -245,7 +265,9 @@ window.addEventListener('DOMContentLoaded', () => {
                 font_size: parseInt(propFontSize.value),
                 font_weight: propFontWeight.checked ? 'bold' : 'normal',
                 has_background: propBackground.checked,
-                allow_wrap: propWrapText.checked // <-- LÊ A FLAG
+                allow_wrap: propWrapText.checked, // <-- LÊ A FLAG
+                text_align: propTextAlign.value, // <-- LÊ A FLAG
+                text_valign: propTextValign.value // <-- LÊ A FLAG
             };
             
             propCustomTextWrapper.style.display = (config.data_source === 'custom') ? 'block' : 'none';

@@ -1,15 +1,10 @@
 {% extends "admin/change_form.html" %}
 {% load static %}
 
-{# 
-  Este bloco agora renderiza TODOS os campos, 
-  incluindo o 'layout_json' (que o JS vai esconder).
-#}
 {% block field_sets %}
   {{ block.super }} 
 {% endblock %}
 
-{# Este bloco é renderizado DEPOIS dos campos #}
 {% block after_field_sets %}
   {{ block.super }}
 
@@ -29,6 +24,7 @@
 
       <fieldset class="module" id="property-panel" style="display: none;">
         <h3>Propriedades do Elemento</h3>
+        
         <div class="form-row">
             <label for="prop-data-source">Fonte do Dado:</label>
             <select id="prop-data-source">
@@ -41,18 +37,39 @@
             <label for="prop-custom-text">Texto Fixo:</label>
             <input type="text" id="prop-custom-text">
         </div>
-        <div class="form-row" id="font-size-wrapper">
-            <label for="prop-font-size">Tam. Fonte (pt):</label>
-            <input type="number" id="prop-font-size" step="1">
-        </div>
-        <div class="form-row" id="font-weight-wrapper">
-            <label for="prop-font-weight">Negrito:</label>
-            <input type="checkbox" id="prop-font-weight">
-        </div>
-        <div class="form-row" id="wrap-text-wrapper">
-            <label for="prop-wrap-text">Permitir quebra de linha:</label>
-            <input type="checkbox" id="prop-wrap-text">
-        </div>
+
+        <div id="text-properties">
+            <div class="form-row" id="font-size-wrapper">
+                <label for="prop-font-size">Tam. Fonte (pt):</label>
+                <input type="number" id="prop-font-size" step="1">
+            </div>
+            <div class="form-row" id="font-weight-wrapper">
+                <label for="prop-font-weight">Negrito:</label>
+                <input type="checkbox" id="prop-font-weight">
+            </div>
+            <div class="form-row" id="wrap-text-wrapper">
+                <label for="prop-wrap-text">Permitir quebra de linha:</label>
+                <input type="checkbox" id="prop-wrap-text">
+            </div>
+
+            <div class="form-row" id="text-align-wrapper">
+                <label for="prop-text-align">Alinhamento Horizontal:</label>
+                <select id="prop-text-align">
+                    <option value="left">Esquerda</option>
+                    <option value="center">Centro</option>
+                    <option value="right">Direita</option>
+                </select>
+            </div>
+            <div class="form-row" id="text-valign-wrapper">
+                <label for="prop-text-valign">Alinhamento Vertical:</label>
+                <select id="prop-text-valign">
+                    <option value="top">Topo</option>
+                    <option value="middle">Meio</option>
+                    <option value="bottom">Base</option>
+                </select>
+            </div>
+            </div>
+
         <div class="form-row">
             <label for="prop-background">Fundo Preto:</label>
             <input type="checkbox" id="prop-background">
