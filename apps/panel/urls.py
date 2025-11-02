@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views
+from apps.panel import views
 
 urlpatterns = [
     # Rota para a página principal (HTML)

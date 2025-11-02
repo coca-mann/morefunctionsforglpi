@@ -13,7 +13,7 @@ from rest_framework_simplejwt.views import (
 urlpatterns = [
     path('admin/sincronizar-impressoras/', rodar_sincronizacao_impressoras, name='sincronizar_impressoras'),
     path('admin/', admin.site.urls),
-    path('glpi/', include('apps.dbcom.urls')),
+    path('glpi/', include('apps.panel.urls')),
     path('api/', include('printer.urls')),
     # URLs de autenticação JWT
     path('api/auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
