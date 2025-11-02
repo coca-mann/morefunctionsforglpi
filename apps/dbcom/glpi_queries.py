@@ -76,48 +76,6 @@ def get_panel_data():
     return db_glpi.fetch_query(sql)
 
 
-def get_open_tickets():
-    """Busca todos os tickets abertos (status != 'closed')."""
-    if not db_glpi:
-        return []
-
-    sql = """
-        SELECT id, name, date, status
-        FROM glpi_tickets
-        WHERE status NOT IN ('closed', 'solved')
-        ORDER BY date DESC
-    """
-    
-    # Usa a função auxiliar do db_manager
-    return db_glpi.fetch_query(sql)
-
-def get_tickets_by_user(user_email: str):
-    """Busca tickets de um usuário específico."""
-    if not db_glpi:
-        return []
-
-    sql = """
-        SELECT t.id, t.name, u.email
-        FROM glpi_tickets t
-        JOIN glpi_users u ON t.users_id_recipient = u.id
-        WHERE u.email = %s
-    """
-    
-    # Passa os parâmetros de forma segura (evita SQL Injection)
-    params = (user_email,)
-    return db_glpi.fetch_query(sql, params)
-
-def close_ticket(ticket_id: int):
-    """Muda o status de um ticket para 'closed'."""
-    if not db_glpi:
-        return False
-        
-    sql = "UPDATE glpi_tickets SET status = 'closed' WHERE id = %s"
-    params = (ticket_id,)
-    
-    # Usa a função auxiliar para INSERT/UPDATE
-    return db_glpi.execute_query(sql, params)
-
 def get_assets_for_printing(asset_type: str):
     if not db_glpi:
         return []
@@ -234,4 +192,35 @@ def get_assets_for_printing(asset_type: str):
     params = (asset_type,)
     
     return db_glpi.fetch_query(sql, params)
+
+
+def tickets_resolved_today():
     
+    if not db_glpi:
+        return []
+    
+    sql="""
+    SELECT COUNT(gt.id) AS Solved_today FROM glpi_tickets gt 
+    WHERE 
+        gt.is_deleted = 0
+        AND gt.solvedate >= CURDATE()
+        AND gt.solvedate < (CURDATE() + INTERVAL 1 DAY)
+    """
+        
+    return db_glpi.fetch_query(sql)
+
+
+def tickets_open_today():
+    
+    if not db_glpi:
+        return []
+    
+    sql="""
+    SELECT COUNT(gt.id) AS Open_today FROM glpi_tickets gt 
+    WHERE 
+        gt.is_deleted = 0 
+        AND gt.`date` >= CURDATE()
+        AND gt.`date` < (CURDATE() + INTERVAL 1 DAY)
+    """
+    
+    return db_glpi.fetch_query(sql)

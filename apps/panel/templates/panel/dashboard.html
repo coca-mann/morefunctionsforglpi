@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel de Tickets - TI</title>
     <link href="https://cdn.tailwindcss.com" rel="stylesheet">
-    <!-- Adicionar Font Awesome para ícones -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -251,18 +250,25 @@
                 <!-- Contadores à esquerda -->
                 <div id="counters-left">
                     <div class="counter-item">
-                        <i class="fas fa-check counter-icon"></i>
-                        <div class="counter-number" id="resolved-today">0</div>
+                        <span class="material-icons counter-icon">library_add</span>
+                        <div class="counter-number" id="abertos-hoje">0</div>
                     </div>
                     
                     <div class="counter-item">
-                        <i class="fas fa-plus counter-icon"></i>
-                        <div class="counter-number" id="registered-today">0</div>
+                        <span class="material-icons counter-icon">library_add_check</span>
+                        <div class="counter-number" id="resolvidos-hoje">0</div>
                     </div>
                 </div>
 
                 <!-- Relógio à direita -->
-                <div id="clock">00:00:00</div>
+                <!-- ALTERAÇÃO: Sino movido para a esquerda do relógio e espaçamento ajustado -->
+                <div class="flex items-center space-x-6">
+                    <!-- Ícone de status do áudio -->
+                    <div id="audio-status" class="cursor-pointer" title="O som está desativado. Clique para ativar.">
+                        <span class="material-icons">notifications_off</span>
+                    </div>
+                    <div id="clock" class="ml-4">00:00:00</div>
+                </div>
             </div>
         </div>
 
@@ -286,6 +292,60 @@
 
     <script>
         const dataUrl = "{% url 'api_painel_data' %}";
+
+        const soundUrl = 'https://cdn.pixabay.com/audio/2025/06/02/audio_a1fabf1d84.mp3';
+        const audioStatusIcon = document.getElementById('audio-status');
+
+        let notificationSound;
+        let soundEnabled = false;
+        let seenTicketIDs = new Set();
+        let isInitialLoad = true;
+
+        // 1. Inicializa o objeto de Áudio (precisa de interação do usuário)
+        function initAudio() {
+            if (soundEnabled || notificationSound) return; // Já inicializado
+            
+            try {
+                notificationSound = new Audio(soundUrl);
+                notificationSound.preload = 'auto';
+                soundEnabled = true;
+                console.log("Áudio ativado. O som será tocado no próximo evento.");
+
+                if (audioStatusIcon) {
+                    // Toca um som de "confirmação" para o usuário saber que funcionou
+                    // É melhor tocar primeiro, antes de esconder o ícone
+                    playNotificationSound(); 
+                    
+                    // Esconde o ícone após ser clicado
+                    audioStatusIcon.style.display = 'none';
+                }
+                
+                // Toca um som de "confirmação" para o usuário saber que funcionou
+                playNotificationSound();
+            } catch (e) {
+                console.error("Falha ao criar objeto de Áudio.", e);
+            }
+        }
+
+        // 2. Função para tocar o som
+        function playNotificationSound() {
+            if (!soundEnabled || !notificationSound) {
+                console.log("Som desativado ou não carregado.");
+                return;
+            }
+
+            // Garante que o som toque do início
+            notificationSound.currentTime = 0; 
+            
+            const promise = notificationSound.play();
+            if (promise !== undefined) {
+                promise.catch(error => {
+                    console.error("Erro ao tocar som:", error);
+                    // Isso pode acontecer se o usuário não interagiu com a página
+                });
+            }
+        }
+        // --- FIM: Lógica de Som e Estado ---
 
         function getStatusClass(statusId) {
             const statusColorMap = {
@@ -347,26 +407,6 @@
             });
         }
 
-        function updateCounters(tickets) {
-            const today = new Date();
-            const todayDateString = String(today.getDate()).padStart(2, '0') + '/' + 
-                                    String(today.getMonth() + 1).padStart(2, '0') + '/' + 
-                                    today.getFullYear();
-
-            // Contar tickets resolvidos hoje (statusid === 5)
-            const resolved = tickets.filter(t => {
-                return t.idstatus === 5 && t.Abertura.includes(todayDateString);
-            }).length;
-            
-            // Contar tickets registrados hoje
-            const registered = tickets.filter(t => {
-                return t.Abertura.includes(todayDateString);
-            }).length;
-            
-            document.getElementById('resolved-today').textContent = resolved;
-            document.getElementById('registered-today').textContent = registered;
-        }
-
         // Atualizar relógio
         function updateClock() {
             const now = new Date();
@@ -388,12 +428,41 @@
                     throw new Error(`Erro retornado pela API: ${result.error}`);
                 }
 
-                const data = result.data || result;
+                const data = result.data || [];
+                const counters = result.counters;
+
                 console.log("[v0] Dados recebidos:", data);
+                console.log("[v0] Contadores recebidos:", counters);
+
+                // --- INÍCIO: Lógica de Comparação para Som ---
+                const newTicketIDs = new Set(data.map(t => t.id));
+                let playSound = false;
+
+                data.forEach(ticket => {
+                    // Se o ID do ticket não estava na lista anterior E o status é 'Novo' (1)
+                    if (!seenTicketIDs.has(ticket.id) && ticket.idstatus === 1) {
+                        playSound = true;
+                    }
+                });
+
+                // Toca o som (se não for a carga inicial)
+                if (playSound && !isInitialLoad) {
+                    playNotificationSound();
+                }
+
+                // Atualiza o estado para a próxima verificação
+                seenTicketIDs = newTicketIDs;
+                isInitialLoad = false;
+                // --- FIM: Lógica de Comparação para Som ---
 
                 // Renderiza os tickets e atualiza contadores
                 renderTickets(data);
-                updateCounters(data);
+                if (counters) {
+                    // Atribui Abertos Hoje ao ID 'abertos-hoje'
+                    document.getElementById('abertos-hoje').textContent = counters.open_today;
+                    // Atribui Resolvidos Hoje ao ID 'resolvidos-hoje'
+                    document.getElementById('resolvidos-hoje').textContent = counters.resolved_today;
+                }
 
             } catch (error) {
                 console.error("Falha ao buscar dados:", error);
@@ -416,6 +485,9 @@
                 fetchAndUpdateTable();
             }
         });
+
+        audioStatusIcon.addEventListener('click', initAudio, { once: true });
+        document.body.addEventListener('touchstart', initAudio, { once: true });
     </script>
 </body>
 </html>

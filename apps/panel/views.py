@@ -1,7 +1,6 @@
 from django.shortcuts import render
 from django.http import JsonResponse
-from apps.dbcom.glpi_queries import get_panel_data
-import datetime
+from apps.dbcom.glpi_queries import get_panel_data, tickets_resolved_today, tickets_open_today
 
 def dashboard_page(request):
     """
@@ -13,17 +12,38 @@ def dashboard_page(request):
 
 def api_get_panel_data(request):
     """
-    Uma view de API que retorna os dados do painel em formato JSON.
-    Esta view será chamada a cada 30 segundos pelo JavaScript.
-    
-    Como a query 'get_panel_data' já traz os dados formatados,
-    esta view apenas busca os dados e os retorna.
+    Uma view de API que retorna os dados do painel E OS CONTADORES em JSON.
     """
+
     try:
         data = get_panel_data()
-    except Exception as e:
-        # Captura erros da query (ex: conexão falhou)
-        print(f"Erro na API ao buscar dados do GLPI: {e}")
-        return JsonResponse({'data': [], 'error': str(e)}, status=500)
         
-    return JsonResponse({'data': data})
+        resolved_result = tickets_resolved_today()
+        open_result = tickets_open_today()
+        
+        solved_count = 0
+        if resolved_result:
+            solved_count = resolved_result[0].get('Solved_today', 0)
+        
+        open_count = 0
+        if open_result:
+            open_count = open_result[0].get('Open_today', 0)
+        
+        response_data = {
+            'data': data,
+            'counters': {
+                'resolved_today': solved_count,
+                'open_today': open_count
+            }
+        }
+        return JsonResponse(response_data)
+
+    except Exception as e:
+        print(f"Erro na API ao buscar dados do GLPI: {e}")
+        # Retorna um payload de erro consistente
+        error_response = {
+            'data': [],
+            'counters': {'resolved_today': 0, 'open_today': 0},
+            'error': str(e)
+        }
+        return JsonResponse(error_response, status=500)
