@@ -1,7 +1,6 @@
 import io
 import os
 import win32api
-import win32print
 import time
 import tempfile
 from .models import Impressora, EtiquetaLayout
@@ -101,6 +100,10 @@ def gerar_e_imprimir_etiquetas(lista_de_etiquetas: list):
     if not elementos_layout:
         return (False, f"O layout '{layout.nome}' está vazio. Adicione elementos no editor do admin.")
 
+    print(f"[DEBUG] Layout JSON a ser usado (total {len(elementos_layout)} elementos):")
+    import json
+    print(json.dumps(elementos_layout, indent=2))
+
     # Itera sobre cada ETIQUETA a ser impressa
     for dados_etiqueta in lista_de_etiquetas:
         
@@ -121,6 +124,7 @@ def gerar_e_imprimir_etiquetas(lista_de_etiquetas: list):
                     texto = elemento.get('custom_text', '')
                 else:
                     texto = dados_etiqueta.get(data_key, f'[{data_key}?]')
+                    print(f'Titulo enviado para impressão: {texto}')
                 
                 # Estilos
                 has_background = elemento.get('has_background', False)
@@ -197,19 +201,53 @@ def gerar_e_imprimir_etiquetas(lista_de_etiquetas: list):
                 
                 data_key = elemento.get('data_source', 'url')
                 if data_key == 'custom':
-                    data_to_encode = elemento.get('custom_text', '')
+                    data_to_encode_raw = elemento.get('custom_text', '')
                 else:
-                    data_to_encode = dados_etiqueta.get(data_key, '') 
+                    data_to_encode_raw = dados_etiqueta.get(data_key, '') 
+                    print(f'URL qrcode enviado para impressão: {data_to_encode_raw}')
+
+                data_to_encode = str(data_to_encode_raw).strip()
+
+                # Use repr() para ver caracteres invisíveis como '\n' ou ' '
+                print(f"[DEBUG] Tentando gerar QR Code para:")
+                print(f"  > DADO BRUTO: {repr(data_to_encode_raw)}")
+                print(f"  > DADO LIMPO: {repr(data_to_encode)}")
                 
                 has_background = elemento.get('has_background', False)
                 fill_color = "white" if has_background else "black"
                 back_color = "black" if has_background else "white"
 
-                qr_maker = qrcode.QRCode(version=None, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=0)
-                qr_maker.add_data(data_to_encode) 
-                qr_maker.make(fit=True)
-                qr_img = qr_maker.make_image(fill_color=fill_color, back_color=back_color).convert("RGB")
-                c.drawInlineImage(qr_img, el_x, el_y, width=el_size, height=el_size)
+                try:
+                    # 3. Bloco try/except específico para o QR Code
+                    qr_maker = qrcode.QRCode(
+                        version=None, 
+                        error_correction=qrcode.constants.ERROR_CORRECT_L, 
+                        box_size=10, 
+                        border=0
+                    )
+                    
+                    qr_maker.add_data(data_to_encode) 
+                    qr_maker.make(fit=True)
+                    
+                    qr_img = qr_maker.make_image(fill_color=fill_color, back_color=back_color)
+                    
+                    c.drawInlineImage(qr_img, el_x, el_y, width=el_size, height=el_size)
+                
+                except Exception as qr_error:
+                    # 4. Se falhar, desenha um placeholder de ERRO no PDF
+                    print(f"!!!!!!!!!! ERRO AO GERAR QR CODE !!!!!!!!!!")
+                    print(f"  > Erro: {qr_error}")
+                    print(f"  > Dados que falharam: {repr(data_to_encode)}")
+                    
+                    c.setFillColor(colors.red)
+                    c.rect(el_x, el_y, el_size, el_size, stroke=1, fill=1)
+                    c.setFillColor(colors.white)
+                    c.setFont("Helvetica", 6)
+                    # Tenta centralizar a palavra "ERRO"
+                    try:
+                        c.drawCentredString(el_x + el_size/2, el_y + el_size/2 - 3, "QR-ERROR")
+                    except:
+                        pass
         
         c.showPage()
     
