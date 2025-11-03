@@ -77,7 +77,12 @@ def get_panel_data():
 
 
 def get_assets_for_printing(asset_type: str):
+
+    print("\n--- DEBUG: get_assets_for_printing ---")
+    print(f"[DEBUG] Tentando buscar ativos do tipo: {asset_type}")
+
     if not db_glpi:
+        print("[DEBUG] FALHA: db_glpi não está inicializado.")
         return []
     
     sql="""
@@ -189,9 +194,25 @@ def get_assets_for_printing(asset_type: str):
         ORDER BY
             all_assets.asset_name ASC
     """
-    params = (asset_type,)
+
+    try:
+
+        params = (asset_type,)
+        assets = db_glpi.fetch_query(sql, params)
     
-    return db_glpi.fetch_query(sql, params)
+        print(f"[DEBUG] Query executada com sucesso. Itens encontrados: {len(assets)}")
+        
+        if len(assets) > 0:
+            print(f"[DEBUG] Exemplo de ativo: {assets[0]}")
+            
+        return assets
+
+    except Exception as e:
+        # --- DEBUGGING ---
+        # Se a query falhar (ex: tabela não existe, permissão negada na tabela)
+        # o erro aparecerá aqui no console do Django.
+        print(f"[DEBUG] ERRO CRÍTICO AO EXECUTAR A QUERY: {e}")
+        return []
 
 
 def tickets_resolved_today():
