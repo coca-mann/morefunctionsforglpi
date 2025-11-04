@@ -70,7 +70,7 @@ def get_panel_data():
             WHEN 10  THEN 5  -- Quinta prioridade
             WHEN 5  THEN 6  -- Sexta prioridade
             ELSE 999        -- Joga qualquer outro status (como o 4) para o final
-        END ASC, gt.urgency DESC
+        END ASC, gt.urgency DESC, gt.`date` DESC
     """
     
     return db_glpi.fetch_query(sql)
