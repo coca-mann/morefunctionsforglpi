@@ -62,7 +62,8 @@ def get_panel_data():
             gt.`date`,
             gt.status,
             gt.urgency
-        ORDER BY CASE gt.status
+        ORDER BY gt.urgency DESC,
+            CASE gt.status
             WHEN 1  THEN 1  -- Primeira prioridade
             WHEN 2  THEN 2  -- Segunda prioridade
             WHEN 3  THEN 3  -- Terceira prioridade
@@ -70,7 +71,7 @@ def get_panel_data():
             WHEN 10  THEN 5  -- Quinta prioridade
             WHEN 5  THEN 6  -- Sexta prioridade
             ELSE 999        -- Joga qualquer outro status (como o 4) para o final
-        END ASC, gt.urgency DESC, gt.`date` DESC
+        END ASC, gt.`date` DESC
     """
     
     return db_glpi.fetch_query(sql)
