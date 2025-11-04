@@ -7,6 +7,43 @@
     <link href="https://cdn.tailwindcss.com" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
+        /* ADICIONADO: Variáveis Globais de Cor */
+        :root {
+            /* Paleta Principal */
+            --color-bg-dark-start: #212121;
+            --color-bg-dark-end: #212121;
+            --color-bg-header-start: #1e293b;
+            --color-bg-header-end: #0f172a;
+            --color-text-main: #e0e0e0;
+            --color-primary-accent: #e0e0e0;
+            --color-border-light: #334155;
+            --color-row-hover: rgba(71, 85, 105, 0.3);
+            
+            /* Scrollbar */
+            --color-scrollbar-track: #0f172a;
+            --color-scrollbar-thumb: #475569;
+            --color-scrollbar-thumb-hover: #64748b;
+
+            /* Urgências (Cores de Borda) */
+            --urgency-5: #693AB6; /* Muito alta */
+            --urgency-4: #EA4C3C; /* Alta */
+            --urgency-3: #F79B1E; /* Média */
+            --urgency-2: #FBEC47; /* Baixa */
+            --urgency-1: #57AE52; /* Muito baixa */
+
+            /* Status (Cores Customizadas) */
+            --status-1: #22c55e;
+            --status-1-text: black;
+            --status-2-border: #22c55e;
+            --status-3-border: #3b82f6;
+            --status-4: #f97316;
+            --status-4-text: black;
+            --status-5: #000000;
+            --status-5-text: #ffffff;
+            --status-10: #9333ea;
+            --status-10-text: white;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -14,8 +51,9 @@
         }
 
         body {
-            background: linear-gradient(135deg, #0f172a 0%, #1a1f3a 100%);
-            color: #e2e8f0;
+            /* ATUALIZADO: Usando variáveis */
+            background: linear-gradient(135deg, var(--color-bg-dark-start) 0%, var(--color-bg-dark-end) 100%);
+            color: var(--color-text-main);
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             overflow: hidden;
             height: 100vh;
@@ -24,27 +62,33 @@
         /* Table Styles */
         .table-row {
             display: grid;
+            /* ATUALIZADO: 5 colunas, Status movido para primeiro */
             grid-template-columns: 220px 140px 180px 2fr 160px;
             gap: 12px;
             padding: 20px 20px;
             align-items: center;
-            border-bottom: 1px solid #334155;
+            /* ATUALIZADO: Usando variáveis */
+            border-bottom: 1px solid var(--color-border-light);
+            /* ATUALIZADO: Fonte da linha aumentada */
             font-size: 30px;
             line-height: 1.4;
             transition: all 0.3s ease;
         }
 
         .table-row:hover {
-            background: rgba(71, 85, 105, 0.3);
+            /* ATUALIZADO: Usando variáveis */
+            background: var(--color-row-hover);
         }
 
         .table-header {
             display: grid;
+            /* ATUALIZADO: 5 colunas, Status movido para primeiro */
             grid-template-columns: 220px 140px 180px 2fr 160px;
             gap: 12px;
             padding: 20px;
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-            border-bottom: 2px solid #0ea5e9;
+            /* ATUALIZADO: Usando variáveis */
+            background: linear-gradient(135deg, var(--color-bg-header-start) 0%, var(--color-bg-header-end) 100%);
+            border-bottom: 2px solid var(--color-primary-accent);
             font-weight: bold;
             font-size: 20px;
             position: sticky;
@@ -53,9 +97,11 @@
         }
 
         .header-cell {
-            color: #0ea5e9;
+            /* ATUALIZADO: Usando variáveis */
+            color: var(--color-primary-accent);
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            /* ATUALIZADO: Fonte do cabeçalho aumentada */
             font-size: 26px;
         }
 
@@ -85,21 +131,26 @@
 
         .counter-icon {
             font-size: 36px;
-            color: #0ea5e9;
+            /* ATUALIZADO: Usando variáveis */
+            color: var(--color-primary-accent);
         }
 
         .counter-number {
+            /* ATUALIZADO: Fonte do contador aumentada */
             font-size: 48px;
             font-weight: bold;
-            color: #0ea5e9;
+            /* ATUALIZADO: Usando variáveis */
+            color: var(--color-primary-accent);
             line-height: 1;
         }
 
         /* Clock */
         #clock {
+            /* ATUALIZADO: Fonte do relógio aumentada */
             font-size: 64px;
             font-weight: bold;
-            color: #0ea5e9;
+            /* ATUALIZADO: Usando variáveis */
+            color: var(--color-primary-accent);
             font-variant-numeric: tabular-nums;
             font-family: 'Monaco', 'Menlo', monospace;
             white-space: nowrap;
@@ -118,22 +169,26 @@
         }
 
         .tickets-scroll::-webkit-scrollbar-track {
-            background: #0f172a;
+            /* ATUALIZADO: Usando variáveis */
+            background: var(--color-scrollbar-track);
         }
 
         .tickets-scroll::-webkit-scrollbar-thumb {
-            background: #475569;
+            /* ATUALIZADO: Usando variáveis */
+            background: var(--color-scrollbar-thumb);
             border-radius: 4px;
         }
 
         .tickets-scroll::-webkit-scrollbar-thumb:hover {
-            background: #64748b;
+            /* ATUALIZADO: Usando variáveis */
+            background: var(--color-scrollbar-thumb-hover);
         }
 
         /* Urgency badge styles using custom colors */
         .urgency-badge {
             padding: 8px 14px;
             border-radius: 6px;
+            /* ATUALIZADO: Fonte do badge aumentada */
             font-size: 22px;
             font-weight: bold;
             text-align: center;
@@ -141,41 +196,42 @@
             width: 100%;
         }
 
-        /* Atualizar estilos de urgência para bordas com fundo transparente */
+        /* ATUALIZADO: Estilos de urgência usando variáveis */
         .urgency-badge.bg-\[\#693AB6\] {
             background-color: transparent !important;
-            color: #693AB6 !important;
-            border: 2px solid #693AB6 !important;
+            color: var(--urgency-5) !important;
+            border: 2px solid var(--urgency-5) !important;
         }
 
         .urgency-badge.bg-\[\#EA4C3C\] {
             background-color: transparent !important;
-            color: #EA4C3C !important;
-            border: 2px solid #EA4C3C !important;
+            color: var(--urgency-4) !important;
+            border: 2px solid var(--urgency-4) !important;
         }
 
         .urgency-badge.bg-\[\#F79B1E\] {
             background-color: transparent !important;
-            color: #F79B1E !important;
-            border: 2px solid #F79B1E !important;
+            color: var(--urgency-3) !important;
+            border: 2px solid var(--urgency-3) !important;
         }
 
         .urgency-badge.bg-\[\#FBEC47\] {
             background-color: transparent !important;
-            color: #FBEC47 !important;
-            border: 2px solid #FBEC47 !important;
+            color: var(--urgency-2) !important;
+            border: 2px solid var(--urgency-2) !important;
         }
 
         .urgency-badge.bg-\[\#57AE52\] {
             background-color: transparent !important;
-            color: #57AE52 !important;
-            border: 2px solid #57AE52 !important;
+            color: var(--urgency-1) !important;
+            border: 2px solid var(--urgency-1) !important;
         }
 
         /* Adicionar estilo para card de status */
         .status-badge {
             padding: 10px 14px;
             border-radius: 6px;
+            /* ATUALIZADO: Fonte do badge aumentada */
             font-size: 22px;
             font-weight: 600;
             text-align: center;
@@ -184,40 +240,40 @@
             color: white;
         }
 
-        /* Ajustar cores dos status conforme especificação */
+        /* ATUALIZADO: Estilos de status usando variáveis */
         .status-badge.bg-blue-600 {
-            background-color: #22c55e !important;
-            color: black !important;
+            background-color: var(--status-1) !important;
+            color: var(--status-1-text) !important;
             border: none;
         }
 
         .status-badge.bg-orange-500 {
             background-color: transparent !important;
-            color: #22c55e !important;
-            border: 2px solid #22c55e !important;
+            color: var(--status-2-border) !important;
+            border: 2px solid var(--status-2-border) !important;
         }
 
         .status-badge.bg-purple-600 {
             background-color: transparent !important;
-            color: #3b82f6 !important;
-            border: 2px solid #3b82f6 !important;
+            color: var(--status-3-border) !important;
+            border: 2px solid var(--status-3-border) !important;
         }
 
         .status-badge.bg-yellow-500 {
-            background-color: #f97316 !important;
-            color: black !important;
+            background-color: var(--status-4) !important;
+            color: var(--status-4-text) !important;
             border: none;
         }
 
         .status-badge.bg-green-500 {
-            background-color: #000000 !important;
-            color: #ffffff !important;
+            background-color: var(--status-5) !important;
+            color: var(--status-5-text) !important;
             border: none;
         }
 
         .status-badge.bg-cyan-500 {
-            background-color: #9333ea !important;
-            color: white !important;
+            background-color: var(--status-10) !important;
+            color: var(--status-10-text) !important;
             border: none;
         }
 
@@ -228,7 +284,6 @@
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
-
         .truncate-1 {
             white-space: nowrap;
             overflow: hidden;
