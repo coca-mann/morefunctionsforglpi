@@ -24,12 +24,12 @@
         /* Table Styles */
         .table-row {
             display: grid;
-            grid-template-columns: 160px 120px 160px 1.5fr 200px 180px 180px 140px;
+            grid-template-columns: 220px 140px 180px 2fr 160px;
             gap: 12px;
             padding: 20px 20px;
             align-items: center;
             border-bottom: 1px solid #334155;
-            font-size: 24px;
+            font-size: 30px;
             line-height: 1.4;
             transition: all 0.3s ease;
         }
@@ -40,7 +40,7 @@
 
         .table-header {
             display: grid;
-            grid-template-columns: 160px 120px 160px 1.5fr 200px 180px 180px 140px;
+            grid-template-columns: 220px 140px 180px 2fr 160px;
             gap: 12px;
             padding: 20px;
             background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
@@ -56,7 +56,7 @@
             color: #0ea5e9;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            font-size: 22px;
+            font-size: 26px;
         }
 
         /* Header container com flexbox correto */
@@ -89,7 +89,7 @@
         }
 
         .counter-number {
-            font-size: 42px;
+            font-size: 48px;
             font-weight: bold;
             color: #0ea5e9;
             line-height: 1;
@@ -97,7 +97,7 @@
 
         /* Clock */
         #clock {
-            font-size: 56px;
+            font-size: 64px;
             font-weight: bold;
             color: #0ea5e9;
             font-variant-numeric: tabular-nums;
@@ -134,7 +134,7 @@
         .urgency-badge {
             padding: 8px 14px;
             border-radius: 6px;
-            font-size: 18px;
+            font-size: 22px;
             font-weight: bold;
             text-align: center;
             display: inline-block;
@@ -176,7 +176,7 @@
         .status-badge {
             padding: 10px 14px;
             border-radius: 6px;
-            font-size: 18px;
+            font-size: 22px;
             font-weight: 600;
             text-align: center;
             display: inline-block;
@@ -274,13 +274,10 @@
 
         <!-- Table Header -->
         <div class="table-header">
-            <div class="header-cell centered-column">ID</div>
+            <div class="header-cell centered-column">Status</div>
             <div class="header-cell centered-column">Abertura</div>
             <div class="header-cell centered-column">Entidade</div>
             <div class="header-cell">Título</div>
-            <div class="header-cell centered-column">Status</div>
-            <div class="header-cell centered-column">Solicitante</div>
-            <div class="header-cell centered-column">Atendente</div>
             <div class="header-cell centered-column">Urgência</div>
         </div>
 
@@ -390,16 +387,13 @@
                 const statusColorClass = getStatusClass(ticket.idstatus);
 
                 row.innerHTML = `
-                    <div class="truncate-1 centered-column">${ticket.id}</div>
+                    <div class="status-badge ${statusColorClass}">${ticket.Status}</div>
                     <div class="abertura-cell centered-column">
                         <div class="abertura-data">${ticket.Abertura ? ticket.Abertura.split(' ')[0] : '-'}</div>
                         <div class="abertura-hora">${ticket.Abertura ? ticket.Abertura.split(' ')[1] : '-'}</div>
                     </div>
                     <div class="truncate-1 centered-column">${ticket.Entidade}</div>
                     <div class="truncate-2">${ticket.Titulo}</div>
-                    <div class="status-badge ${statusColorClass}">${ticket.Status}</div>
-                    <div class="truncate-1">${ticket.Solicitante}</div>
-                    <div class="truncate-1 centered-column">${ticket.Tecnico || '-'}</div>
                     <div class="urgency-badge ${urgencyClasses}">${ticket.Urgencia}</div>
                 `;
                 
