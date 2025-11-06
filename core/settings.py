@@ -86,8 +86,18 @@ WSGI_APPLICATION = 'core.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'data' / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql', # Sim, use 'mysql' para MariaDB
+        'NAME': os.getenv('MYSQLDB_DATABASE'),
+        'USER': os.getenv('MYSQLDB_USER'),
+        'PASSWORD': os.getenv('MYSQLDB_PASSWORD'),
+        'HOST': os.getenv('MYSQLDB_HOST'),
+        'PORT': os.getenv('MYSQLDB_PORT'),
+        
+        # Opções recomendadas para MariaDB
+        'OPTIONS': {
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+            'charset': 'utf8mb4',
+        },
     }
 }
 
