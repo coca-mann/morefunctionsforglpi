@@ -345,60 +345,94 @@
 
     <script>
         const dataUrl = "{% url 'api_painel_data' %}";
-
-        const soundUrl = 'https://cdn.pixabay.com/audio/2025/06/02/audio_a1fabf1d84.mp3';
+        const settingsUrl = "{% url 'api_get_dashboard_settings' %}"; // <-- URL das Configurações
         const audioStatusIcon = document.getElementById('audio-status');
 
-        let notificationSound;
-        let soundEnabled = false;
+        // Estado do Dashboard
         let seenTicketIDs = new Set();
         let isInitialLoad = true;
+        let isSoundEnabled = false; // Começa desativado
 
-        // 1. Inicializa o objeto de Áudio (precisa de interação do usuário)
-        function initAudio() {
-            if (soundEnabled || notificationSound) return; // Já inicializado
-            
+        // Configurações (com valores padrão que serão sobrescritos)
+        let FETCH_INTERVAL_MS = 30000; // Padrão de 30s
+        let NOTIFICATION_AUDIO = new Audio(); // Player de áudio global
+
+        let dataPollCounter = 0;
+        const SETTINGS_POLL_RATE = 10; // Atualiza as configs a cada 10 buscas de dados
+        let mainTimerId = null;
+
+        async function loadDashboardSettings() {
             try {
-                notificationSound = new Audio(soundUrl);
-                notificationSound.preload = 'auto';
-                soundEnabled = true;
-                console.log("Áudio ativado. O som será tocado no próximo evento.");
-
-                if (audioStatusIcon) {
-                    // Toca um som de "confirmação" para o usuário saber que funcionou
-                    // É melhor tocar primeiro, antes de esconder o ícone
-                    playNotificationSound(); 
-                    
-                    // Esconde o ícone após ser clicado
-                    audioStatusIcon.style.display = 'none';
-                }
+                const response = await fetch(settingsUrl);
+                if (!response.ok) throw new Error('Falha ao buscar configurações');
                 
-                // Toca um som de "confirmação" para o usuário saber que funcionou
-                playNotificationSound();
-            } catch (e) {
-                console.error("Falha ao criar objeto de Áudio.", e);
+                const settings = await response.json();
+
+                // Atualiza as variáveis globais
+                FETCH_INTERVAL_MS = settings.fetch_interval_seconds * 1000;
+                NOTIFICATION_AUDIO = new Audio(settings.notification_sound_url);
+                NOTIFICATION_AUDIO.preload = 'auto';
+                
+                console.log(`Configurações carregadas: Intervalo ${FETCH_INTERVAL_MS}ms`);
+                console.log(`Som URL: ${settings.notification_sound_url}`);
+
+            } catch (error) {
+                console.warn("Erro ao carregar configurações, usando padrões (30s).", error);
+                // O script continua com os padrões definidos acima
             }
         }
 
-        // 2. Função para tocar o som
-        function playNotificationSound() {
-            if (!soundEnabled || !notificationSound) {
-                console.log("Som desativado ou não carregado.");
+        function enableAudio() {
+            if (isSoundEnabled) return; // Já está ativado
+
+            isSoundEnabled = true;
+            
+            // Atualiza o ícone para "ativo"
+            if (audioStatusIcon) {
+                audioStatusIcon.innerHTML = '<span class="material-icons">notifications_active</span>';
+                audioStatusIcon.setAttribute('title', 'O som está ativado.');
+                // (Opcional) Esconde o ícone após um tempo para limpar a UI
+                setTimeout(() => { 
+                    if (audioStatusIcon) audioStatusIcon.style.display = 'none'; 
+                }, 3000);
+            }
+
+            // Toca um som de "confirmação" para o usuário saber que funcionou
+            playNotificationSound(true); // 'true' = forçar o play
+            console.log("Áudio ativado pelo usuário.");
+        }
+
+        /**
+         * Toca o som de notificação global.
+         */
+         function playNotificationSound(forcePlay = false) {
+            if (!isSoundEnabled && !forcePlay) {
+                console.log("Notificação recebida, mas som está desativado.");
                 return;
             }
 
-            // Garante que o som toque do início
-            notificationSound.currentTime = 0; 
+            if (!NOTIFICATION_AUDIO.src || NOTIFICATION_AUDIO.src.endsWith('none.mp3')) {
+                console.log("Som de notificação está definido como 'Nenhum' ou é inválido.");
+                return;
+            }
+
+            NOTIFICATION_AUDIO.currentTime = 0; 
+            const promise = NOTIFICATION_AUDIO.play();
             
-            const promise = notificationSound.play();
             if (promise !== undefined) {
                 promise.catch(error => {
                     console.error("Erro ao tocar som:", error);
-                    // Isso pode acontecer se o usuário não interagiu com a página
+                    // Se o play falhar (ex: autoplay bloqueado), re-exibe o ícone de mudo
+                    if (audioStatusIcon) {
+                        audioStatusIcon.innerHTML = '<span class="material-icons">notifications_off</span>';
+                        audioStatusIcon.setAttribute('title', 'O som foi bloqueado. Clique para reativar.');
+                        audioStatusIcon.style.display = 'block';
+                        isSoundEnabled = false; // Reseta o estado
+                    }
                 });
             }
         }
-        // --- FIM: Lógica de Som e Estado ---
+
 
         function getStatusClass(statusId) {
             const statusColorMap = {
@@ -469,33 +503,26 @@
         async function fetchAndUpdateTable() {
             try {
                 const response = await fetch(dataUrl);
-                if (!response.ok) {
-                    throw new Error(`Erro na API: ${response.statusText}`);
-                }
-                const result = await response.json();
+                if (!response.ok) throw new Error(`Erro na API: ${response.statusText}`);
                 
-                if (result.error) {
-                    throw new Error(`Erro retornado pela API: ${result.error}`);
-                }
+                const result = await response.json();
+                if (result.error) throw new Error(`Erro retornado pela API: ${result.error}`);
 
                 const data = result.data || [];
                 const counters = result.counters;
 
-                console.log("[v0] Dados recebidos:", data);
-                console.log("[v0] Contadores recebidos:", counters);
-
-                // --- INÍCIO: Lógica de Comparação para Som ---
+                // --- Lógica de Notificação de Som (Refatorada) ---
                 const newTicketIDs = new Set(data.map(t => t.id));
-                let playSound = false;
+                let playSound = false; // Flag para tocar o som *uma vez*
 
                 data.forEach(ticket => {
-                    // Se o ID do ticket não estava na lista anterior E o status é 'Novo' (1)
+                    // Se o ticket é novo (não estava no 'seenTicketIDs') E o status é 'Novo' (1)
                     if (!seenTicketIDs.has(ticket.id) && ticket.idstatus === 1) {
                         playSound = true;
                     }
                 });
 
-                // Toca o som (se não for a carga inicial)
+                // Toca o som (se não for a carga inicial e a flag for positiva)
                 if (playSound && !isInitialLoad) {
                     playNotificationSound();
                 }
@@ -503,14 +530,11 @@
                 // Atualiza o estado para a próxima verificação
                 seenTicketIDs = newTicketIDs;
                 isInitialLoad = false;
-                // --- FIM: Lógica de Comparação para Som ---
+                // --- Fim da Lógica de Som ---
 
-                // Renderiza os tickets e atualiza contadores
                 renderTickets(data);
                 if (counters) {
-                    // Atribui Abertos Hoje ao ID 'abertos-hoje'
                     document.getElementById('abertos-hoje').textContent = counters.open_today;
-                    // Atribui Resolvidos Hoje ao ID 'resolvidos-hoje'
                     document.getElementById('resolvidos-hoje').textContent = counters.resolved_today;
                 }
 
@@ -518,26 +542,75 @@
                 console.error("Falha ao buscar dados:", error);
                 document.getElementById('tickets-container').innerHTML = 
                     '<div style="padding: 20px; color: #ef4444; font-size: 48px;">Falha ao recuperar dados. Esta pagina ficará indisponível.</div>';
+                if (mainTimerId) {
+                    clearTimeout(mainTimerId);
+                }
             }
         }
 
-        // Iniciar atualizações
-        updateClock();
-        fetchAndUpdateTable();
-        
-        setInterval(updateClock, 1000);
-        setInterval(fetchAndUpdateTable, 10000);
+        /**
+         * Novo loop principal.
+         * Este loop se auto-agenda (usando setTimeout) e é responsável
+         * por chamar a busca de dados e a busca de configurações.
+         */
+         async function mainDataLoop() {
+            try {
+                // 1. Verifica se é hora de atualizar as configurações
+                if (dataPollCounter % SETTINGS_POLL_RATE === 0) {
+                    console.log("Verificando atualizações de configurações...");
+                    await loadDashboardSettings();
+                    dataPollCounter = 0; // Reseta o contador
+                }
+                dataPollCounter++;
+                
+                // 2. Busca os dados dos tickets
+                await fetchAndUpdateTable();
 
-        // Manter página sempre ativa
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden) {
-                updateClock();
-                fetchAndUpdateTable();
+            } catch (error) {
+                console.error("Erro no loop principal:", error);
             }
-        });
+            
+            // 3. Agenda a *próxima* execução
+            // O loop usa o valor de FETCH_INTERVAL_MS que pode ter sido
+            // atualizado pelo 'loadDashboardSettings'.
+            if (mainTimerId) clearTimeout(mainTimerId); // Limpa o timer antigo se houver
+            mainTimerId = setTimeout(mainDataLoop, FETCH_INTERVAL_MS);
+        }
 
-        audioStatusIcon.addEventListener('click', initAudio, { once: true });
-        document.body.addEventListener('touchstart', initAudio, { once: true });
+        /**
+         * Função principal que inicializa o dashboard.
+         */
+        async function initializeDashboard() {
+            console.log("Inicializando dashboard...");
+            
+            // 1º: Carrega as configurações (som, intervalo) PELA PRIMEIRA VEZ
+            await loadDashboardSettings();
+            
+            // 2º: Inicia o relógio
+            updateClock();
+            setInterval(updateClock, 1000);
+            
+            // 3º: Inicia o loop principal de dados (que se auto-agenda)
+            mainDataLoop();
+            
+            // 4º: Configura os listeners de áudio
+            audioStatusIcon.addEventListener('click', enableAudio, { once: true });
+            document.body.addEventListener('touchstart', enableAudio, { once: true });
+
+            // 5º: Configura o listener de visibilidade
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) {
+                    console.log("Página visível, atualizando dados imediatamente...");
+                    updateClock();
+                    // Limpa o timer agendado e roda o loop imediatamente
+                    if (mainTimerId) clearTimeout(mainTimerId);
+                    mainDataLoop();
+                }
+            });
+        }
+
+        // Inicia tudo
+        initializeDashboard();
     </script>
 </body>
 </html>
