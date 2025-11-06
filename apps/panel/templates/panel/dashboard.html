@@ -295,6 +295,21 @@
         .centered-column {
             text-align: center;
         }
+
+        /* 1. Define a animação de "pulso" */
+        @keyframes pulse-animation {
+            0%   { background-color: transparent; }
+            50%  { background-color: var(--color-row-hover); }
+            100% { background-color: transparent; }
+        }
+
+        /* 2. Define a classe que usa a animação */
+        .new-ticket-pulse {
+            /* animation: [nome] [duração] [contagem de repetições];
+              Pulsa 3 vezes ao longo de 2.5 segundos.
+            */
+            animation: pulse-animation 1.0s 5;
+        }
     </style>
 </head>
 <body>
@@ -450,7 +465,7 @@
             if (!urgencyText) return 'bg-gray-200 text-gray-800';
 
             const styles = {
-                'Muito alta': 'bg-[#693AB6] text-white',
+                'Muito Alta': 'bg-[#693AB6] text-white',
                 'Alta': 'bg-[#EA4C3C] text-white',
                 'Média': 'bg-[#F79B1E] text-gray-900',
                 'Baixa': 'bg-[#FBEC47] text-gray-900',
@@ -472,6 +487,10 @@
             tickets.forEach(ticket => {
                 const row = document.createElement('div');
                 row.className = `table-row ${getRowClasses(ticket.idstatus)}`;
+
+                if (ticket.isNew && !isInitialLoad) {
+                    row.classList.add('new-ticket-pulse');
+                }
                 
                 const urgencyClasses = getUrgencyClasses(ticket.Urgencia);
                 const statusColorClass = getStatusClass(ticket.idstatus);
@@ -516,8 +535,12 @@
                 let playSound = false; // Flag para tocar o som *uma vez*
 
                 data.forEach(ticket => {
-                    // Se o ticket é novo (não estava no 'seenTicketIDs') E o status é 'Novo' (1)
-                    if (!seenTicketIDs.has(ticket.id) && ticket.idstatus === 1) {
+                    const isNew = !seenTicketIDs.has(ticket.id);
+                    
+                    // "Marca" o objeto do ticket para o renderTickets saber
+                    ticket.isNew = isNew; 
+                    
+                    if (isNew && ticket.idstatus === 1) { // Se for novo E tiver status "Novo"
                         playSound = true;
                     }
                 });
