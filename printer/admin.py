@@ -1,21 +1,46 @@
 from django.contrib import admin
-from .models import Impressora, EtiquetaLayout
+from .models import EtiquetaLayout, PrintServer
+from .forms import PrintServerAdminForm
 
-@admin.register(Impressora)
-class ImpressoraAdmin(admin.ModelAdmin):
-    list_display = ('nome', 'localizacao', 'porta', 'ativa', 'selecionada_para_impressao')
-    list_filter = ('ativa', 'selecionada_para_impressao', 'localizacao')
-    search_fields = ('nome', 'localizacao', 'driver', 'porta')
-    actions = ['marcar_como_padrao']
 
-    def marcar_como_padrao(self, request, queryset):
-        # Apenas uma pode ser padrão, então pegamos a primeira da seleção
-        if queryset.exists():
-            impressora = queryset.first()
-            impressora.selecionada_para_impressao = True
-            impressora.save() # Nosso save() cuida do resto
-            self.message_user(request, f"Impressora '{impressora.nome}' definida como padrão.")
-    marcar_como_padrao.short_description = "Marcar selecionada como padrão"
+@admin.register(PrintServer)
+class PrintServerAdmin(admin.ModelAdmin):
+    """
+    Admin para o novo modelo de Servidor de Impressão.
+    """
+    list_display = ('nome', 'endereco_servico', 'nome_impressora_padrao', 'ativo', 'atualizado_em')
+    list_filter = ('ativo',)
+    search_fields = ('nome', 'endereco_servico', 'nome_impressora_padrao')
+    
+    form = PrintServerAdminForm
+    
+    # Organiza os campos no admin
+    fieldsets = (
+        (None, {
+            'fields': ('nome', 'ativo')
+        }),
+        ('Detalhes da Conexão', {
+            'fields': ('endereco_servico', 'api_key_input'),
+            'description': 'Informações para conectar ao serviço de impressão do Windows.'
+        }),
+        ('Configuração da Impressora', {
+            'fields': ('nome_impressora_padrao',),
+            'description': 'Clique nos botões (que aparecerão abaixo após salvar) para buscar e definir a impressora.'
+        }),
+    )
+    
+    # 1. Aponta para um template customizado (onde colocaremos os botões)
+    change_form_template = 'admin/printer/printserver/change_form.html'
+    
+    # 2. Injeta o JavaScript customizado nesta página
+    class Media:
+        js = (
+            'admin/js/jquery.init.js', # Garante que o jQuery do admin esteja carregado
+            'printer/js/print_server_admin.js', # Nosso novo JS para os botões
+        )
+        css = {
+            'all': ('printer/css/print_server_admin.css',)
+        }
 
 
 @admin.register(EtiquetaLayout)

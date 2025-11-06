@@ -421,12 +421,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (response.ok) {
                 printMessage.className = 'success';
-                printMessage.innerText = `Sucesso! ${result.message || 'Itens enviados.'}`;
+                printMessage.innerText = `Sucesso! ${result.mensagem || 'Itens enviados.'}`;
                 checkedCheckboxes.forEach(cb => cb.checked = false);
                 selectAllCheckbox.checked = false;
                 updatePrintButtonState();
             } else {
-                throw new Error(result.message || 'Erro desconhecido');
+                throw new Error(result.mensagem || 'Erro desconhecido no endpoint de impressão');
             }
 
         } catch (error) {

@@ -1,0 +1,51 @@
+{% extends "admin/change_form.html" %}
+{% load i18n %}
+
+{# Renderiza os fieldsets normais (nome, endereço, chave, etc.) #}
+{% block field_sets %}
+    {{ block.super }}
+{% endblock %}
+
+{# Adiciona nossos botões customizados depois dos campos #}
+{% block after_field_sets %}
+{{ block.super }}
+
+{# 
+  Só mostramos os botões se o objeto JÁ EXISTIR (tiver um ID),
+  pois precisamos dos dados salvos para fazer as chamadas de API.
+#}
+{% if object_id %}
+<fieldset class="module aligned">
+    <h2>Ações do Servidor Remoto</h2>
+    
+    <div id="printer-status-message" style="display: none;"></div>
+
+    <div class="form-row">
+        <label>Testar Conexão:</label>
+        <button type="button" id="test-connection-btn" class="button">Testar</button>
+    </div>
+    
+    <div class="form-row">
+        <label>Buscar Impressoras:</label>
+        <button type="button" id="fetch-printers-btn" class="button">Buscar Impressoras no Servidor</button>
+    </div>
+
+    <div class="form-row">
+        <label>Impressoras Encontradas:</label>
+        <div class="printer-list-wrapper">
+            <ul id="printer-list">
+                <li class="readonly">Clique em "Buscar Impressoras" para popular esta lista.</li>
+            </ul>
+        </div>
+    </div>
+</fieldset>
+
+<script id="print-server-data" 
+        data-object-id="{{ object_id }}"
+        data-test-url="{% url 'api_test_print_server' object_id %}"
+        data-fetch-url="{% url 'api_fetch_remote_printers' object_id %}"
+>
+</script>
+
+{% endif %}
+{% endblock %}

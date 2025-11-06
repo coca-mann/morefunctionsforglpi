@@ -1,56 +1,96 @@
+import os
 from django.db import models
 from django.db.models import JSONField
+from dotenv import load_dotenv
+from cryptography.fernet import Fernet
 
-class Impressora(models.Model):
-    # O nome principal, que usaremos como identificador único
+
+load_dotenv()
+
+try:
+    fern_obj = Fernet(os.getenv('DB_ENCRYPTION_KEY'))
+except Exception as e:
+    print(f"AVISO CRÍTICO: Não foi possível carregar a FERNET_KEY das configurações. {e}")
+    fern_obj = None
+
+
+class PrintServer(models.Model):
+    """
+    Armazena os detalhes de conexão de um serviço de impressão remoto.
+    Substitui o antigo modelo 'Impressora'.
+    """
     nome = models.CharField(
-        max_length=255, 
+        max_length=100,
         unique=True,
-        help_text="Nome da impressora como aparece no Windows (pPrinterName)."
+        help_text="Um nome amigável para este servidor (ex: 'Zebra da Expedição', 'Impressora da TI')."
     )
-    # Campos para armazenar os dados capturados
-    driver = models.CharField(max_length=255, blank=True, help_text="Nome do driver (pDriverName).")
-    porta = models.CharField(max_length=100, blank=True, help_text="Porta de conexão (pPortName).")
-    localizacao = models.CharField(max_length=255, blank=True, null=True, help_text="Localização física (pLocation).")
-    comentario = models.TextField(blank=True, null=True, help_text="Comentários da impressora (pComment).")
-    
-    # Códigos numéricos brutos do sistema
-    status_code = models.IntegerField(null=True, blank=True, help_text="Código de status numérico do Windows (Status).")
-    attributes_code = models.IntegerField(null=True, blank=True, help_text="Código de atributos numérico (Attributes).")
-
-    # Nosso controle interno
-    ativa = models.BooleanField(
-        default=True,
-        help_text="Controle interno para habilitar ou desabilitar o uso desta impressora no sistema."
+    endereco_servico = models.CharField(
+        max_length=255,
+        help_text="Endereço IP e porta do serviço de impressão. Ex: http://192.168.1.50:5001"
     )
-    selecionada_para_impressao = models.BooleanField(
+    api_key = models.TextField(
+        blank=True,
+        help_text="A chave 'X-API-Key' secreta (será salva criptografada).",
+        verbose_name="Chave de API (Criptografada)"
+    )
+    nome_impressora_padrao = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="O nome exato da impressora no Windows a ser usada por este serviço (ex: 'Zebra ZD420').",
+        verbose_name="Impressora Padrão"
+    )
+    ativo = models.BooleanField(
         default=False,
-        help_text="Marque esta opção para definir esta como a impressora padrão do sistema."
+        help_text="Define este como o servidor de impressão ativo para todas as impressões do sistema."
     )
     
-    # Datas de sincronização
-    ultima_sincronizacao = models.DateTimeField(auto_now=True)
     criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.nome
     
     def save(self, *args, **kwargs):
-        """
-        Sobrescreve o método save para garantir que apenas uma impressora
-        seja a selecionada para impressão.
-        """
-        # Se este objeto está sendo marcado como o selecionado
-        if self.selecionada_para_impressao:
-            # Desmarca todas as outras impressoras. O .exclude(pk=self.pk) garante
-            # que não desmarquemos o objeto que estamos prestes a salvar.
-            Impressora.objects.filter(selecionada_para_impressao=True).exclude(pk=self.pk).update(selecionada_para_impressao=False)
+        """ Garante que apenas um servidor de impressão possa ser 'ativo'. """
+        if self.ativo:
+            PrintServer.objects.filter(ativo=True).exclude(pk=self.pk).update(ativo=False)
         
-        super(Impressora, self).save(*args, **kwargs)
+        # A lógica de criptografia será movida para o 'forms.py'
+        # para lidar corretamente com a entrada do admin.
+        super(PrintServer, self).save(*args, **kwargs)
+
+    # --- NOVO: Métodos de Criptografia ---
+    def set_api_key(self, plain_key: str):
+        """
+        Criptografa uma chave de texto simples e a armazena.
+        """
+        if not fern_obj:
+            raise ValueError("FERNET_KEY não está configurada.")
+        if not plain_key:
+            self.api_key = ""
+        else:
+            encrypted_key = fern_obj.encrypt(plain_key.encode('utf-8'))
+            self.api_key = encrypted_key.decode('utf-8')
+
+    def get_decrypted_api_key(self) -> str:
+        """
+        Descriptografa a chave armazenada e a retorna como texto simples.
+        """
+        if not fern_obj:
+            raise ValueError("FERNET_KEY não está configurada.")
+        if not self.api_key:
+            return ""
+        
+        try:
+            decrypted_key = fern_obj.decrypt(self.api_key.encode('utf-8'))
+            return decrypted_key.decode('utf-8')
+        except Exception as e:
+            print(f"Erro ao descriptografar a chave para PrintServer {self.id}: {e}")
+            return "" # Retorna vazio em caso de falha
 
     class Meta:
-        verbose_name = "Impressora"
-        verbose_name_plural = "Impressoras"
+        verbose_name = "Servidor de Impressão"
+        verbose_name_plural = "Servidores de Impressão"
 
 
 class EtiquetaLayout(models.Model):

@@ -1,0 +1,64 @@
+/* Wrapper para a lista de impressoras */
+.printer-list-wrapper {
+    /* Baseado nos widgets do Django admin */
+    border: 1px solid var(--border-color);
+    background: var(--body-bg);
+    border-radius: 4px;
+    padding: 5px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+#printer-list {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+
+#printer-list li {
+    padding: 8px 10px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border-color);
+}
+#printer-list li:last-child {
+    border-bottom: none;
+}
+
+#printer-list li.readonly {
+    cursor: default;
+    color: var(--text-color-light);
+}
+
+#printer-list li:not(.readonly):hover {
+    background-color: var(--primary-color-light);
+}
+
+/* Estilo da impressora selecionada */
+#printer-list li.selected {
+    background-color: var(--primary-color) !important;
+    color: white !important;
+    font-weight: bold;
+}
+
+/* Mensagens de Status */
+#printer-status-message {
+    padding: 10px 15px;
+    margin: 0 0 15px 0;
+    border-radius: 4px;
+    font-weight: bold;
+}
+#printer-status-message.success {
+    background-color: var(--success-bg);
+    border: 1px solid var(--success-fg);
+    color: var(--success-fg);
+}
+#printer-status-message.error {
+    background-color: var(--error-bg);
+    border: 1px solid var(--error-fg);
+    color: var(--error-fg);
+}
+#printer-status-message.loading {
+    background-color: var(--info-bg);
+    border: 1px solid var(--info-fg);
+    color: var(--info-fg);
+}

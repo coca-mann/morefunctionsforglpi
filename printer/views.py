@@ -3,8 +3,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
-from .models import Impressora, EtiquetaLayout
-from .serializers import ImpressoraSerializer, EtiquetaLayoutListSerializer, EtiquetaLayoutUpdateSerializer, EtiquetaParaImprimirSerializer
+from .models import EtiquetaLayout, PrintServer
+from .serializers import EtiquetaLayoutListSerializer, EtiquetaLayoutUpdateSerializer, EtiquetaParaImprimirSerializer
 from .services import gerar_e_imprimir_etiquetas
 
 from django.core.management import call_command
@@ -14,31 +14,67 @@ from django.contrib.admin.views.decorators import staff_member_required
 import io
 from contextlib import redirect_stdout
 
-# --- Views para Impressoras ---
+import requests
 
+
+@staff_member_required # Garante que apenas usuários do admin possam chamar
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def listar_impressoras_api(request):
+def test_print_server_connection(request, pk):
     """
-    Retorna uma lista de todas as impressoras cadastradas no sistema.
-    """
-    impressoras = Impressora.objects.all()
-    serializer = ImpressoraSerializer(impressoras, many=True)
-    return Response(serializer.data)
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def selecionar_impressora_padrao_api(request, pk):
-    """
-    Recebe o ID (pk) de uma impressora e a define como padrão.
+    View que o admin chama para testar a conexão com um PrintServer.
     """
     try:
-        impressora = Impressora.objects.get(pk=pk)
-        impressora.selecionada_para_impressao = True
-        impressora.save() # Nosso método save() personalizado vai desmarcar as outras
-        return Response({'status': 'sucesso', 'mensagem': f"Impressora '{impressora.nome}' definida como padrão."})
-    except Impressora.DoesNotExist:
-        return Response({'erro': 'Impressora não encontrada.'}, status=status.HTTP_404_NOT_FOUND)
+        server = PrintServer.objects.get(pk=pk)
+    except PrintServer.DoesNotExist:
+        return Response({"mensagem": "Servidor de impressão não encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+    url = f"{server.endereco_servico}/api/test"
+    headers = {'X-API-Key': server.get_decrypted_api_key()}
+
+    try:
+        response = requests.get(url, headers=headers, timeout=5) # Timeout de 5s
+        
+        if response.status_code == 200:
+            return Response(response.json())
+        else:
+            msg = f"Serviço retornou erro {response.status_code}. Resposta: {response.text}"
+            return Response({"mensagem": msg}, status=response.status_code)
+            
+    except requests.exceptions.Timeout:
+        return Response({"mensagem": "Timeout: O serviço de impressão demorou muito para responder."}, status=status.HTTP_408_REQUEST_TIMEOUT)
+    except requests.exceptions.ConnectionError:
+        return Response({"mensagem": f"Erro de Conexão: Não foi possível conectar a {server.endereco_servico}."}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+    except Exception as e:
+        return Response({"mensagem": f"Erro inesperado: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@staff_member_required
+@api_view(['GET'])
+def fetch_remote_printers(request, pk):
+    """
+    View que o admin chama para buscar a lista de impressoras
+    de um PrintServer remoto.
+    """
+    try:
+        server = PrintServer.objects.get(pk=pk)
+    except PrintServer.DoesNotExist:
+        return Response({"mensagem": "Servidor de impressão não encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+    url = f"{server.endereco_servico}/api/printers"
+    headers = {'X-API-Key': server.get_decrypted_api_key()}
+
+    try:
+        response = requests.get(url, headers=headers, timeout=10) # 10s para impressoras de rede
+        
+        if response.status_code == 200:
+            # Re-envia a resposta JSON do serviço de impressão
+            return Response(response.json())
+        else:
+            msg = f"Serviço retornou erro {response.status_code}. Resposta: {response.text}"
+            return Response({"mensagem": msg}, status=response.status_code)
+            
+    except requests.exceptions.RequestException as e:
+        return Response({"mensagem": f"Erro de conexão com o serviço: {str(e)}"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
 # --- Views para Layouts ---
 
@@ -95,24 +131,40 @@ def selecionar_layout_padrao_api(request, pk):
 # --- View para Impressão ---
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated]) # Mantenha a autenticação que você preferir
 def imprimir_etiquetas_api(request):
     """
     Recebe uma lista de objetos com 'titulo' e 'url' e os envia para impressão.
+    AGORA LÊ O SERVIDOR ATIVO NO BANCO DE DADOS.
     """
-    # Valida a entrada para garantir que é uma lista de objetos válidos
     serializer = EtiquetaParaImprimirSerializer(data=request.data, many=True)
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-    # Se a validação passou, chama nosso serviço
+    # --- LÓGICA DE IMPRESSÃO MODIFICADA ---
+    try:
+        # 1. Encontra o servidor de impressão ATIVO
+        server = PrintServer.objects.get(ativo=True)
+    except PrintServer.DoesNotExist:
+        return Response({"status": "erro", "mensagem": "Nenhum servidor de impressão está marcado como 'ativo' no admin."}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+    except PrintServer.MultipleObjectsReturned:
+        return Response({"status": "erro", "mensagem": "ERRO CRÍTICO: Mais de um servidor de impressão está 'ativo'. Verifique o admin."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    if not server.nome_impressora_padrao:
+        return Response({"status": "erro", "mensagem": f"O servidor de impressão '{server.nome}' não tem uma impressora padrão selecionada."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    # 2. Chama o serviço (que agora precisa do 'server' e 'printer_name')
     dados_validados = serializer.validated_data
-    sucesso, mensagem = gerar_e_imprimir_etiquetas(lista_de_etiquetas=dados_validados)
+    sucesso, mensagem = gerar_e_imprimir_etiquetas(
+        lista_de_etiquetas=dados_validados,
+        print_server=server,
+        printer_name=server.nome_impressora_padrao
+    )
+    # --- FIM DA MODIFICAÇÃO ---
     
     if sucesso:
         return Response({'status': 'sucesso', 'mensagem': mensagem})
     else:
-        # Erro interno do servidor (ex: impressora offline, layout não encontrado)
         return Response({'status': 'erro', 'mensagem': mensagem}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 

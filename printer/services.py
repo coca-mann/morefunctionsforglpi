@@ -1,9 +1,7 @@
 import io
-import os
-import win32api
-import time
-import tempfile
-from .models import Impressora, EtiquetaLayout
+import requests
+import qrcode
+from .models import EtiquetaLayout, PrintServer
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import mm
 from reportlab.lib import colors
@@ -12,61 +10,50 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import Paragraph
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
-import qrcode
-from PIL import Image
 
-def imprimir_pdf_na_impressora_padrao(caminho_do_pdf):
+
+def enviar_para_servico_de_impressao(pdf_bytes, print_server: PrintServer, printer_name: str):
     """
-    Busca a impressora padrão definida no sistema Django e envia um PDF
-    diretamente para ela, usando o verbo 'printto'.
-
-    Args:
-        caminho_do_pdf (str): O caminho absoluto para o arquivo PDF no servidor.
-
-    Returns:
-        tuple: (sucesso, mensagem)
+    Envia os bytes de um PDF para o serviço de impressão externo.
     """
     try:
-        # 1. Busca a impressora selecionada no seu sistema Django
-        impressora_selecionada = Impressora.objects.get(selecionada_para_impressao=True, ativa=True)
-    except Impressora.DoesNotExist:
-        return (False, "Nenhuma impressora padrão foi selecionada ou está ativa no sistema.")
-    except Impressora.MultipleObjectsReturned:
-        return (False, "ERRO CRÍTICO: Mais de uma impressora está marcada como padrão. Verifique o admin.")
-
-    # 2. Verifica se o arquivo PDF existe
-    if not os.path.exists(caminho_do_pdf):
-        return (False, f"Arquivo PDF não encontrado em: {caminho_do_pdf}")
-
-    # 3. Usa ShellExecute com 'printto' para impressão direta
-    nome_da_impressora = impressora_selecionada.nome
-    try:
-        # Esta é a chamada mágica:
-        # ShellExecute(hwnd, op, file, params, dir, show)
-        # params é o nome da impressora para o verbo 'printto'
-        ret = win32api.ShellExecute(
-            0,                          # hwnd
-            "printto",                  # Ação: imprimir para
-            caminho_do_pdf,             # Arquivo
-            f'"{nome_da_impressora}"',  # Parâmetro: O nome da impressora (entre aspas por segurança)
-            ".",                        # Diretório
-            0                           # Não mostrar a janela do aplicativo
-        )
-
-        # A API ShellExecute retorna um valor > 32 em caso de sucesso.
-        if ret > 32:
-            # Dê um tempo para o spooler de impressão processar
-            time.sleep(5)
-            return (True, f"Documento enviado diretamente para a impressora '{nome_da_impressora}'.")
+        # --- MUDANÇAS AQUI ---
+        url = f"{print_server.endereco_servico}/api/print"
+        headers = {'X-API-Key': print_server.get_decrypted_api_key()} # Usa a chave descriptografada
+        
+        # O 'printer_name' é enviado no 'data'
+        data = {'printer_name': printer_name}
+        
+        files = {
+            'pdf_file': ('etiqueta.pdf', pdf_bytes, 'application/pdf')
+        }
+        
+        response = requests.post(url, headers=headers, data=data, files=files, timeout=10) 
+        # --- FIM DAS MUDANÇAS ---
+        
+        if response.status_code == 200:
+            return (True, "Enviado com sucesso ao serviço de impressão.")
         else:
-            return (False, f"Falha ao enviar para a impressora via ShellExecute. Código de erro: {ret}")
-
+            msg = f"Serviço de impressão retornou erro {response.status_code}. Resposta: {response.text}"
+            print(f"[ERRO IMPRESSÃO] {msg}")
+            return (False, msg)
+            
+    except requests.exceptions.Timeout:
+        msg = "Timeout: O serviço de impressão demorou muito para responder."
+        print(f"[ERRO IMPRESSÃO] {msg}")
+        return (False, msg)
+    except requests.exceptions.ConnectionError:
+        msg = f"Erro de Conexão: Não foi possível conectar ao serviço de impressão em {print_server.endereco_servico}."
+        print(f"[ERRO IMPRESSÃO] {msg}")
+        return (False, msg)
     except Exception as e:
-        # A exceção aqui pode vir do próprio win32api
-        return (False, f"Erro na chamada da API de impressão do Windows: {e}")
+        msg = f"Erro desconhecido ao enviar para o serviço: {e}"
+        print(f"[ERRO IMPRESSÃO] {msg}")
+        return (False, msg)
+    
+    
 
-
-def gerar_e_imprimir_etiquetas(lista_de_etiquetas: list):
+def gerar_e_imprimir_etiquetas(lista_de_etiquetas: list, print_server: PrintServer, printer_name: str):
     """
     Busca o layout padrão, GERA UM PDF DINÂMICO lendo o 'layout_json',
     imprime e descarta.
@@ -257,20 +244,8 @@ def gerar_e_imprimir_etiquetas(lista_de_etiquetas: list):
     pdf_bytes = buffer.getvalue()
     buffer.close()
     
-    arquivo_temporario = None
-    try:
-        fd, path = tempfile.mkstemp(suffix='.pdf')
-        with os.fdopen(fd, 'wb') as tmp:
-            tmp.write(pdf_bytes)
-        
-        sucesso, mensagem = imprimir_pdf_na_impressora_padrao(path)
-        if sucesso:
-            mensagem = f"{len(lista_de_etiquetas)} etiqueta(s) enviada(s) com sucesso para a impressora."
-        return (sucesso, mensagem)
-
-    except Exception as e:
-        return (False, f"Erro ao criar ou imprimir o arquivo com múltiplas etiquetas: {e}")
-        
-    finally:
-        if 'path' in locals() and path and os.path.exists(path):
-            os.unlink(path)
+    return enviar_para_servico_de_impressao(
+        pdf_bytes=pdf_bytes, 
+        print_server=print_server, 
+        printer_name=printer_name
+    )

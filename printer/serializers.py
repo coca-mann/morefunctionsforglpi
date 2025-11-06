@@ -1,12 +1,5 @@
 from rest_framework import serializers
-from .models import Impressora, EtiquetaLayout
-
-
-class ImpressoraSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Impressora
-        fields = ['id', 'nome', 'localizacao', 'driver', 'porta', 'ativa', 'selecionada_para_impressao']
-
+from .models import EtiquetaLayout
 
 class EtiquetaLayoutListSerializer(serializers.ModelSerializer):
     """
