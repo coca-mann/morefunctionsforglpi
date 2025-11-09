@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'apps.printer',
     'apps.panel',
     'apps.dbcom',
+    'apps.reports',
 ]
 
 MIDDLEWARE = [
@@ -76,9 +77,9 @@ AUTHENTICATION_BACKENDS = [
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
-LOGIN_REDIRECT_URL = '/admin/'
-LOGIN_URL = '/accounts/login/'
-ACCOUNT_LOGOUT_REDIRECT_URL = '/accounts/login/'
+# LOGIN_REDIRECT_URL = '/admin/'
+# LOGIN_URL = '/accounts/login/'
+# ACCOUNT_LOGOUT_REDIRECT_URL = '/accounts/login/'
 
 TEMPLATES = [
     {

@@ -246,3 +246,20 @@ def tickets_open_today():
     """
     
     return db_glpi.fetch_query(sql)
+
+
+def get_equipamentos_para_baixa():
+    """
+    Simula uma query ao GLPI que retorna equipamentos com status de baixa.
+    """
+    if not db_glpi:
+        return []
+    
+    sql="""
+    SELECT id, name AS nome, tipo, marca, modelo, patrimonio, serie
+    FROM v_equipamentos_para_baixa
+    """
+    
+    print(db_glpi.fetch_query(sql))
+    
+    return db_glpi.fetch_query(sql)
