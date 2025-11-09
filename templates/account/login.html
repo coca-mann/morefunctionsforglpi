@@ -1,0 +1,95 @@
+{% load static %}
+{% load socialaccount %}
+{% load allauth %}
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <title>Login</title>
+    
+    <link rel="stylesheet" href="{% static 'admin/css/base.css' %}">
+    <link rel="stylesheet" href="{% static 'admin/css/login.css' %}">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+        .login .form-row input[type="text"],
+        .login .form-row input[type="email"],
+        .login .form-row input[type="password"] {
+            width: 100% !important; /* O !important garante a prioridade */
+            box-sizing: border-box; /* Garante que o padding não quebre o layout */
+        }
+    </style>
+</head>
+
+<body class="login">
+
+<div id="container">
+    <div id="header">
+        <div id="branding">
+            <h1 id="site-name">Autenticação do Django</h1>
+        </div>
+    </div>
+    <div id="content" class="colM">
+        <div id="content-main">
+            
+            <form class="login-form" method="post" action="{% url 'account_login' %}">
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                    <p class="errornote">
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </p>
+                {% endif %}
+
+                <div class="form-row">
+                    {% if form.login.errors %}
+                        <p class="errornote">{{ form.login.errors.as_text }}</p>
+                    {% endif %}
+                    
+                    <label for="id_login" class="required">Usuário ou Email:</label>
+                    
+                    {{ form.login }}
+                </div>
+                
+                <div class="form-row">
+                     {% if form.password.errors %}
+                        <p class="errornote">{{ form.password.errors.as_text }}</p>
+                    {% endif %}
+                    
+                    <label for="id_password" class="required">Senha:</label>
+                    {{ form.password }}
+                </div>
+                {% if redirect_field_value %}
+                    <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
+                {% endif %}
+                
+                <div class="submit-row">
+                    <input type="submit" value="Entrar" class="default">
+                </div>
+            </form>
+            
+            <div class="submit-row" style="border-top: 1px solid #eee; margin-top: 15px; padding-top: 15px;">
+                <a href="{% provider_login_url 'glpi' %}" 
+                   style="
+                       background: #007bff;
+                       color: white;
+                       padding: 10px 15px;
+                       text-decoration: none;
+                       border-radius: 4px;
+                       display: block;
+                       text-align: center;
+                       box-sizing: border-box;
+                   ">
+                    Fazer login com GLPI
+                </a>
+            </div>
+
+        </div>
+        <br class="clear">
+    </div>
+    </div>
+</body>
+</html>
