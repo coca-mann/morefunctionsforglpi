@@ -263,3 +263,120 @@ def get_equipamentos_para_baixa():
     print(db_glpi.fetch_query(sql))
     
     return db_glpi.fetch_query(sql)
+
+
+def get_ticket_items(ticket_id):
+    """
+    Busca todos os ativos (Computadores, Periféricos, Impressoras)
+    associados a um chamado do GLPI.
+    
+    Retorna uma lista de dicionários, cada um contendo:
+    - id
+    - endpoint_name (ex: 'Computer', 'Peripheral')
+    - name
+    - status_id
+    """
+    
+    if not db_glpi:
+        print("[DEBUG] FALHA: db_glpi não está inicializado.")
+        return []
+    
+    # A consulta SQL que definimos acima
+    sql = """
+    (
+        SELECT
+            c.id AS id,
+            it.itemtype AS endpoint_name,
+            c.name AS name,
+            c.states_id AS status_id
+        FROM
+            glpi_items_tickets AS it
+        JOIN
+            glpi_computers AS c ON it.items_id = c.id
+        WHERE
+            it.tickets_id = %s
+            AND it.itemtype = 'Computer'
+    )
+    UNION ALL
+    (
+        SELECT
+            p.id AS id,
+            it.itemtype AS endpoint_name,
+            p.name AS name,
+            p.states_id AS status_id
+        FROM
+            glpi_items_tickets AS it
+        JOIN
+            glpi_peripherals AS p ON it.items_id = p.id
+        WHERE
+            it.tickets_id = %s
+            AND it.itemtype = 'Peripheral'
+    )
+    UNION ALL
+    (
+        SELECT
+            pr.id AS id,
+            it.itemtype AS endpoint_name,
+            pr.name AS name,
+            pr.states_id AS status_id
+        FROM
+            glpi_items_tickets AS it
+        JOIN
+            glpi_printers AS pr ON it.items_id = pr.id
+        WHERE
+            it.tickets_id = %s
+            AND it.itemtype = 'Printer'
+    )
+    UNION ALL
+    (
+        SELECT
+            m.id AS id,
+            it.itemtype AS endpoint_name,
+            m.name AS name,
+            m.states_id AS status_id
+        FROM
+            glpi_items_tickets AS it
+        JOIN
+            glpi_monitors AS m ON it.items_id = m.id
+        WHERE
+            it.tickets_id = %s
+            AND it.itemtype = 'Monitor'
+    )
+    UNION ALL
+    (
+        SELECT
+            ad.id AS id,
+            '/Custom/Nobreak' AS endpoint_name,
+            ad.name AS name,
+            ad.states_id AS status_id
+        FROM
+            glpi_items_tickets AS it
+        JOIN
+            glpi_assets_assets AS ad ON it.items_id = ad.id AND ad.assets_assetdefinitions_id = 26
+        WHERE
+            it.tickets_id = %s
+    )
+    UNION ALL
+    (
+        SELECT
+            ad.id AS id,
+            '/Custom/Projetor' AS endpoint_name,
+            ad.name AS name,
+            ad.states_id AS status_id
+        FROM
+            glpi_items_tickets AS it
+        JOIN
+            glpi_assets_assets AS ad ON it.items_id = ad.id AND ad.assets_assetdefinitions_id = 25
+        WHERE
+            it.tickets_id = %s
+    )
+    """
+    
+    try:
+        
+        params = (ticket_id,) * 3
+        return db_glpi.fetch_query(sql, params)
+
+    except Exception as e:
+        print(f"[DEBUG] ERRO CRÍTICO AO EXECUTAR A QUERY: {e}")
+        return []

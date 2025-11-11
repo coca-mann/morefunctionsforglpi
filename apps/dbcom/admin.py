@@ -1,11 +1,12 @@
 from django.contrib import admin
 from django import forms
-from django.urls import path
-from django.http import JsonResponse
+from django.db import models
+from django.urls import path, reverse
+from django.http import JsonResponse, HttpResponseRedirect
+from django.urls import reverse
 import json
 import mysql.connector
-# A importação de modelos agora é relativa ao app 'dbcom'
-from .models import ExternalDbConfig
+from .models import ExternalDbConfig, GLPIConfig
 
 # --- Formulário Customizado ---
 # (Este formulário é para o caso de usarmos criptografia, 
@@ -114,3 +115,87 @@ class ExternalDbConfigAdmin(admin.ModelAdmin):
             return JsonResponse({'status': 'error', 'message': 'Dados inválidos'}, status=400)
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': f'Erro inesperado: {e}'}, status=500)
+
+
+@admin.register(GLPIConfig)
+class GLPIConfigAdmin(admin.ModelAdmin):
+    # Atualiza o list_display com os novos campos
+    list_display = ('glpi_api_url', 'glpi_api_username', 'status_ticket_pendente_id')
+    
+    fieldsets = (
+        ('Configuração da API (OAuth2)', {
+            'fields': (
+                'glpi_api_url', 
+                'glpi_client_id', 
+                'glpi_client_secret',
+                'glpi_api_username', 
+                'glpi_api_password'
+            )
+        }),
+        ('Configuração do Webhook', {
+            'fields': ('webhook_secret_key',)
+        }),
+        ('Regras de Empréstimo (IDs)', { # <-- Título atualizado
+            'fields': (
+                # IDs dos Status do Ativo
+                'status_emprestimo_id', 
+                'status_operacional_id',
+                # IDs dos Status do Chamado
+                'status_ticket_pendente_id', 
+                'status_ticket_solucionado_id',
+                'status_ticket_atendimento_id'
+            )
+        }),
+        ('Cache de Token (Automático)', {
+            'fields': ('glpi_access_token', 'glpi_token_expires_at'),
+        }),
+    )
+    
+    readonly_fields = ('glpi_access_token', 'glpi_token_expires_at')
+
+    # --- Lógica do Singleton Admin (Permanece igual ao anterior) ---
+    def get_urls(self):
+        urls = super().get_urls()
+        app_label = self.model._meta.app_label
+        model_name = self.model._meta.model_name
+        urls = [url for url in urls if url.name != f'{app_label}_{model_name}_changelist']
+        custom_urls = [
+            path(
+                '', 
+                self.admin_site.admin_view(self.changelist_view_singleton), 
+                name=f'{app_label}_{model_name}_changelist' 
+            )
+        ]
+        return custom_urls + urls
+
+    def changelist_view_singleton(self, request, extra_context=None):
+        obj = self.model.objects.first()
+        app_label = self.model._meta.app_label
+        model_name = self.model._meta.model_name
+        if obj:
+            return HttpResponseRedirect(
+                reverse(f'admin:{app_label}_{model_name}_change', args=(obj.pk,))
+            )
+        else:
+            return HttpResponseRedirect(
+                reverse(f'admin:{app_label}_{model_name}_add')
+            )
+
+    def has_add_permission(self, request):
+        return not self.model.objects.exists()
+        
+    def has_delete_permission(self, request, obj=None):
+        return False
+        
+    def response_add(self, request, obj, post_url_continue=None):
+        self.message_user(request, "Configuração criada com sucesso.")
+        app_label = self.model._meta.app_label
+        model_name = self.model._meta.model_name
+        return HttpResponseRedirect(
+            reverse(f'admin:{app_label}_{model_name}_change', args=(obj.pk,))
+        )
+
+    def response_change(self, request, obj):
+        self.message_user(request, "Configuração salva com sucesso.")
+        return HttpResponseRedirect(request.path)
+    

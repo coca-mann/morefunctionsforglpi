@@ -15,6 +15,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('glpi/', include('apps.panel.urls')),
     path('api/', include('apps.printer.urls')),
+    path('api/glpi/webhook/', dbcom_views.GLPIWebhookView.as_view(), name='glpi_webhook_listener'),
     path('api/auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/auth/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
