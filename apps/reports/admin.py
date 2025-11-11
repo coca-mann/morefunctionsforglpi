@@ -1,8 +1,11 @@
 from django.contrib import admin, messages
+from django.http import HttpResponseRedirect
 from django.utils.safestring import mark_safe
 from django.urls import reverse
 from django.contrib import admin, messages
-from .models import MotivoBaixa, LaudoBaixa, ItemLaudo
+from django.db.models import Count, Q
+from .models import MotivoBaixa, LaudoBaixa, ItemLaudo, LaudoTecnico
+from .forms import LaudoBaixaForm
 
 # 1. Importe sua função de query do GLPI
 #    Ajuste este 'import' para o caminho correto da sua função
@@ -20,6 +23,10 @@ class MotivoBaixaAdmin(admin.ModelAdmin):
     """ Admin para os Motivos de Baixa. """
     list_display = ('codigo', 'titulo')
     search_fields = ('codigo', 'titulo', 'descricao')
+    
+    def has_module_permission(self, request):
+        """ Esconde este modelo da página inicial do admin. """
+        return False
 
 
 class ItemLaudoInline(admin.TabularInline):
@@ -62,10 +69,12 @@ class ItemLaudoInline(admin.TabularInline):
 class LaudoBaixaAdmin(admin.ModelAdmin):
     """ Admin principal para o Laudo de Baixa. """
     
+    form = LaudoBaixaForm
+    
     list_display = (
         'numero_documento', 
         'data_laudo', 
-        'tecnico_responsavel', 
+        'get_tecnico_nome_completo', 
         'destinacao', 
         'get_item_count',
         'link_imprimir_pdf'# Contagem de itens (método abaixo)
@@ -92,18 +101,69 @@ class LaudoBaixaAdmin(admin.ModelAdmin):
     # Torna o 'numero_documento' apenas leitura no formulário
     readonly_fields = ('numero_documento',)
     
-    def link_imprimir_pdf(self, obj):
+    def get_queryset(self, request):
+        """
+        Sobrescreve o queryset principal para adicionar anotações
+        que pré-calculam o status de cada laudo de uma só vez.
+        """
+        queryset = super().get_queryset(request)
+        queryset = queryset.annotate(
+            # 1. Conta o total de itens
+            _item_count=Count('itens', distinct=True),
+            
+            # 2. Conta quantos itens estão com o 'motivo_baixa' NULO (pendente)
+            _missing_motivos=Count(
+                'itens', 
+                filter=Q(itens__motivo_baixa__isnull=True), 
+                distinct=True
+            )
+        )
+        return queryset
+    
+    @admin.display(
+        description='Técnico Responsável', 
+        ordering='tecnico_responsavel__first_name'
+    )
+    def get_tecnico_nome_completo(self, obj):
         # 'obj' é a instância do LaudoBaixa
-        if obj.pk: # Se o laudo já foi salvo
-            # 'reports:gerar_pdf_laudo_baixa' vem do urls.py (app_name:name)
-            url = reverse('reports:gerar_pdf_laudo_baixa', args=[obj.pk])
-            return mark_safe(f'<a href="{url}" target="_blank">Gerar PDF</a>')
-        return "N/A (salve primeiro)"
+        # Apenas chamamos a propriedade que já existe no models.py
+        return obj.tecnico_nome_completo
+    
+    def link_imprimir_pdf(self, obj):
+        """
+        Verifica as condições antes de mostrar o link de impressão.
+        Usa os valores pré-calculados do 'get_queryset'.
+        """
+        
+        # 1. Verifica técnico
+        if not obj.tecnico_responsavel:
+            return "Pendente (Técnico)"
+
+        # 2. Verifica destinação
+        if not obj.destinacao:
+            return "Pendente (Destinação)"
+        
+        # 3. Verifica se tem itens (usando a anotação)
+        if obj._item_count == 0:
+            return "Pendente (Sem itens)"
+            
+        # 4. Verifica se todos os itens têm motivo (usando a anotação)
+        if obj._missing_motivos > 0:
+            return f"Pendente ({obj._missing_motivos} itens sem motivo)"
+
+        # Se todas as condições passarem:
+        url = reverse('reports:gerar_pdf_laudo_baixa', args=[obj.pk])
+        return mark_safe(f'<a href="{url}" target="_blank">Gerar PDF</a>')
+    
     link_imprimir_pdf.short_description = "Imprimir Laudo"
     
-    @admin.display(description='Qtd. Itens')
+    @admin.display(description='Qtd. Itens', ordering='_item_count')
     def get_item_count(self, obj):
-        return obj.itens.count()
+        """
+        Usa o valor pré-calculado '_item_count' do 'get_queryset'
+        em vez de fazer uma nova query (obj.itens.count()).
+        """
+        return obj._item_count
 
     def get_actions(self, request):
         # Desabilita a ação de importação se a função não foi encontrada
@@ -181,3 +241,33 @@ class LaudoBaixaAdmin(admin.ModelAdmin):
         # Coloca os campos na ordem desejada no formulário de edição
         self.fields = ('numero_documento', 'data_laudo', 'tecnico', 'destinacao_recomendada')
         return super().get_form(request, obj, **kwargs)
+    
+    def has_module_permission(self, request):
+        """ Esconde este modelo da página inicial do admin. """
+        return False
+
+
+@admin.register(LaudoTecnico)
+class LaudoTecnicoAdmin(admin.ModelAdmin):
+    """
+    Este admin 'falso' serve como o ponto de entrada no menu principal.
+    Ele não tem lista de display, filtros, etc.
+    Sua única função é redirecionar o usuário para a página de categorias.
+    """
+    
+    def changelist_view(self, request, extra_context=None):
+        """
+        Sobrescreve a view de 'lista' (changelist) para redirecionar
+        o usuário para a página de índice da sua app 'reports',
+        onde está o seu template app_index.html customizado.
+        """
+        url = reverse('admin:app_list', kwargs={'app_label': self.model._meta.app_label})
+        return HttpResponseRedirect(url)
+            
+    def has_module_permission(self, request):
+        """ 
+        Esta é a chave: esta função permite que o modelo
+        seja exibido na página inicial do admin.
+        """
+        return True
+

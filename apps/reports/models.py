@@ -100,6 +100,18 @@ class LaudoBaixa(models.Model):
             self.numero_documento = f'LT-{ano_atual}-{novo_numero_seq:03d}'
             
         super().save(*args, **kwargs)
+    
+    @property
+    def tecnico_nome_completo(self):
+        """ Retorna o nome completo do usuário do Django. """
+        if self.tecnico_responsavel:
+            return self.tecnico_responsavel.get_full_name()
+        return "N/A"
+
+    @property
+    def get_destinacao_recomendada_display(self):
+        """ Propriedade para o template de PDF usar o nome legível. """
+        return self.get_destinacao_display()
 
 
 class ItemLaudo(models.Model):
@@ -176,3 +188,17 @@ class ItemLaudo(models.Model):
 
     def __str__(self):
         return self.nome_equipamento
+
+
+class LaudoTecnico(LaudoBaixa):
+    """
+    Modelo Proxy usado para criar um 'atalho' no menu principal do admin.
+    Ele não cria uma nova tabela no banco de dados.
+    """
+    class Meta:
+        # Informa ao Django que este é um modelo proxy
+        proxy = True 
+        
+        # Este é o nome que aparecerá no menu do admin
+        verbose_name = "Laudo Técnico para Baixa Patrimonial"
+        verbose_name_plural = "Laudos Técnicos para Baixa Patrimonial"

@@ -1,0 +1,62 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo;
+    {{ app_label|capfirst }}
+</div>
+{% endblock %}
+
+{% block content %}
+    <!-- 
+        Este é o nosso conteúdo customizado.
+        Em vez de listar os modelos automaticamente,
+        nós criamos os blocos manualmente.
+    -->
+
+    <!-- Bloco 1: Laudos Técnicos -->
+    <table class="module">
+        <caption>
+            <a href="#" class="section">Laudo Técnico para Baixa Patrimonial</a>
+        </caption>
+        
+        <!-- Modelo 1.1: Laudos de Baixa -->
+        <tr class="model-laudobaixa">
+            <th scope="row">
+                <a href="{% url 'admin:reports_laudobaixa_changelist' %}">Laudos de Baixa</a>
+            </th>
+            <td><a href="{% url 'admin:reports_laudobaixa_add' %}" class="addlink">{% trans 'Add' %}</a></td>
+            <td><a href="{% url 'admin:reports_laudobaixa_changelist' %}" class="changelink">{% trans 'Change' %}</a></td>
+        </tr>
+
+        <!-- Modelo 1.2: Motivos de Baixa -->
+        <tr class="model-motivobaixa">
+            <th scope="row">
+                <a href="{% url 'admin:reports_motivobaixa_changelist' %}">Motivos de Baixa</a>
+            </th>
+            <td><a href="{% url 'admin:reports_motivobaixa_add' %}" class="addlink">{% trans 'Add' %}</a></td>
+            <td><a href="{% url 'admin:reports_motivobaixa_changelist' %}" class="changelink">{% trans 'Change' %}</a></td>
+        </tr>
+    </table>
+
+    <!-- 
+        Bloco 2: (Exemplo futuro)
+        Quando você tiver outros relatórios, basta criar uma nova tabela.
+    -->
+    <!-- 
+    <table class="module">
+        <caption>
+            <a href="#" class="section">Relatórios de Inventário</a>
+        </caption>
+        <tr class="model-inventario">
+            <th scope="row">
+                <a href="#">Inventários</a>
+            </th>
+            ...
+        </tr>
+    </table>
+    -->
+
+{% endblock %}
