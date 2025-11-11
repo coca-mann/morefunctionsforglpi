@@ -260,28 +260,20 @@ def get_equipamentos_para_baixa():
     FROM v_equipamentos_para_baixa
     """
     
-    print(db_glpi.fetch_query(sql))
-    
     return db_glpi.fetch_query(sql)
 
 
 def get_ticket_items(ticket_id):
     """
-    Busca todos os ativos (Computadores, Periféricos, Impressoras)
-    associados a um chamado do GLPI.
-    
-    Retorna uma lista de dicionários, cada um contendo:
-    - id
-    - endpoint_name (ex: 'Computer', 'Peripheral')
-    - name
-    - status_id
+    Busca todos os ativos (Computadores, Periféricos, Impressoras, Monitores
+    e Ativos Personalizados) associados a um chamado do GLPI.
     """
     
     if not db_glpi:
         print("[DEBUG] FALHA: db_glpi não está inicializado.")
         return []
     
-    # A consulta SQL que definimos acima
+    # A consulta SQL corrigida
     sql = """
     (
         SELECT
@@ -344,37 +336,43 @@ def get_ticket_items(ticket_id):
     )
     UNION ALL
     (
+        -- BLOCO NOBREAK CORRIGIDO
         SELECT
             ad.id AS id,
-            '/Custom/Nobreak' AS endpoint_name,
+            it.itemtype AS endpoint_name, -- 1. Corrigido
             ad.name AS name,
             ad.states_id AS status_id
         FROM
             glpi_items_tickets AS it
         JOIN
-            glpi_assets_assets AS ad ON it.items_id = ad.id AND ad.assets_assetdefinitions_id = 26
+            glpi_assets_assets AS ad ON it.items_id = ad.id
         WHERE
             it.tickets_id = %s
+            AND it.itemtype = 'nobreak' -- 2. Adicionado
+            AND ad.assets_assetdefinitions_id = 26
     )
     UNION ALL
     (
+        -- BLOCO PROJETOR CORRIGIDO
         SELECT
             ad.id AS id,
-            '/Custom/Projetor' AS endpoint_name,
+            it.itemtype AS endpoint_name, -- 1. Corrigido
             ad.name AS name,
             ad.states_id AS status_id
         FROM
             glpi_items_tickets AS it
         JOIN
-            glpi_assets_assets AS ad ON it.items_id = ad.id AND ad.assets_assetdefinitions_id = 25
+            glpi_assets_assets AS ad ON it.items_id = ad.id
         WHERE
             it.tickets_id = %s
+            AND it.itemtype = 'projetor' -- 2. Adicionado
+            AND ad.assets_assetdefinitions_id = 25
     )
     """
     
     try:
-        
-        params = (ticket_id,) * 3
+        # CORREÇÃO 3: O número de parâmetros deve ser 6
+        params = (ticket_id,) * 6
         return db_glpi.fetch_query(sql, params)
 
     except Exception as e:

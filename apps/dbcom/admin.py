@@ -120,38 +120,29 @@ class ExternalDbConfigAdmin(admin.ModelAdmin):
 @admin.register(GLPIConfig)
 class GLPIConfigAdmin(admin.ModelAdmin):
     # Atualiza o list_display com os novos campos
-    list_display = ('glpi_api_url', 'glpi_api_username', 'status_ticket_pendente_id')
+    list_display = ('glpi_api_url', 'glpi_app_token', 'glpi_user_token', 'status_ticket_pendente_id')
     
     fieldsets = (
-        ('Configuração da API (OAuth2)', {
+        ('Configuração da API Legada (v1)', {
             'fields': (
                 'glpi_api_url', 
-                'glpi_client_id', 
-                'glpi_client_secret',
-                'glpi_api_username', 
-                'glpi_api_password'
+                'glpi_app_token', 
+                'glpi_user_token', 
             )
         }),
         ('Configuração do Webhook', {
             'fields': ('webhook_secret_key',)
         }),
-        ('Regras de Empréstimo (IDs)', { # <-- Título atualizado
+        ('Regras de Empréstimo (IDs)', {
             'fields': (
-                # IDs dos Status do Ativo
                 'status_emprestimo_id', 
                 'status_operacional_id',
-                # IDs dos Status do Chamado
                 'status_ticket_pendente_id', 
                 'status_ticket_solucionado_id',
                 'status_ticket_atendimento_id'
             )
         }),
-        ('Cache de Token (Automático)', {
-            'fields': ('glpi_access_token', 'glpi_token_expires_at'),
-        }),
     )
-    
-    readonly_fields = ('glpi_access_token', 'glpi_token_expires_at')
 
     # --- Lógica do Singleton Admin (Permanece igual ao anterior) ---
     def get_urls(self):

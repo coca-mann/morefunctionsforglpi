@@ -49,42 +49,19 @@ class GLPIConfig(models.Model):
     e do fluxo de empréstimo. Implementa um padrão Singleton.
     """
     
-    # --- Configurações da API v2 ---
+    # --- Configurações da API v1 ---
     glpi_api_url = models.URLField(
         max_length=255, 
         default="https://glpi11.luffyslair.tec.br/api.php/v2",
         help_text="URL base da API v2 do GLPI."
     )
-    # CAMPOS REMOVIDOS: glpi_app_token, glpi_user_token
-    
-    # CAMPOS NOVOS (OAuth2 Password Grant):
-    glpi_client_id = models.CharField(
-        max_length=255, 
-        help_text="Client ID gerado em 'Configurar > Clientes OAuth'."
-    )
-    glpi_client_secret = models.CharField(
-        max_length=255, 
-        help_text="Client Secret gerado em 'Configurar > Clientes OAuth'."
-    )
-    glpi_api_username = models.CharField(
+    glpi_app_token = models.CharField(
         max_length=100, 
-        help_text="Nome de um usuário do GLPI com permissão de API."
+        help_text="Token de Aplicação (App-Token) gerado em 'Configurar > Geral > API'."
     )
-    glpi_api_password = models.CharField(
+    glpi_user_token = models.CharField(
         max_length=100, 
-        help_text="A senha do usuário de API."
-    )
-    
-    # CAMPOS NOVOS (Cache do Token):
-    glpi_access_token = models.TextField(
-        blank=True, 
-        null=True, 
-        help_text="Token de acesso OAuth2 (gerenciado automaticamente)."
-    )
-    glpi_token_expires_at = models.DateTimeField(
-        blank=True, 
-        null=True, 
-        help_text="Data/Hora de expiração do token (gerenciado automaticamente)."
+        help_text="Token Pessoal de Acesso (User-Token) de um usuário com permissão."
     )
 
     # --- Configurações do Webhook ---

@@ -6,8 +6,6 @@ from django.views import View
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib import admin
-from rest_framework.response import Response
-from rest_framework import status
 from .glpi_queries import get_assets_for_printing
 from .models import GLPIConfig
 from .utils import change_glpi_items_status
@@ -79,7 +77,7 @@ class GLPIWebhookView(View):
             print("Erro Crítico: Configuração do GLPI (pk=1) não encontrada.")
             return HttpResponseServerError("Configuração do servidor incompleta.")
 
-        # 1. Processar o Payload (Manual)
+        # 1. Processar o Payload
         body_bytes = request.body
         try:
             data = json.loads(body_bytes) 
@@ -87,7 +85,6 @@ class GLPIWebhookView(View):
             print(f"Erro: Payload recebido não é um JSON válido. Conteúdo: {body_bytes.decode('utf-8', errors='ignore')}")
             return HttpResponseBadRequest("Payload JSON inválido.")
             
-        # Pega o ID do status do chamado (ex: 4)
         ticket_status_id = data.get('ticket_status')
         ticket_id = data.get('ticket_id')
 
@@ -97,24 +94,23 @@ class GLPIWebhookView(View):
             
         print(f"Executando lógica para Ticket {ticket_id}. Status ID: {ticket_status_id}")
 
-        # 2. Lógica de Decisão (CORRIGIDA)
+        # 2. Lógica de Decisão
+        all_errors = [] # Lista para guardar erros
         try:
-            # Compara ID com ID (Inteiro com Inteiro)
             if (ticket_status_id == config.status_ticket_pendente_id):
                 
                 print(f"[Ticket {ticket_id}] Disparando Lógica de EMPRÉSTIMO.")
-                change_glpi_items_status(
+                all_errors = change_glpi_items_status(
                     ticket_id=ticket_id,
                     new_status_id=config.status_emprestimo_id,
                     config=config
                 )
 
-            # Compara ID com ID
             elif (ticket_status_id == config.status_ticket_solucionado_id or 
                   ticket_status_id == config.status_ticket_atendimento_id):
                 
                 print(f"[Ticket {ticket_id}] Disparando Lógica de DEVOLUÇÃO.")
-                change_glpi_items_status(
+                all_errors = change_glpi_items_status(
                     ticket_id=ticket_id,
                     new_status_id=config.status_operacional_id,
                     config=config,
@@ -124,7 +120,16 @@ class GLPIWebhookView(View):
                 print(f"[Ticket {ticket_id}] Status ID '{ticket_status_id}' não aciona ação. Ignorando.")
 
         except Exception as e:
-            print(f"Erro ao processar lógica para Ticket {ticket_id}: {e}")
-            return HttpResponseServerError("Erro interno ao processar lógica.")
+            print(f"Erro GERAL ao processar lógica para Ticket {ticket_id}: {e}")
+            return HttpResponseServerError(f"Erro interno geral: {e}")
 
-        return JsonResponse({"status": "sucesso"}, status=200)
+        # --- NOVA LÓGICA DE RESPOSTA (SEU PEDIDO) ---
+        if all_errors:
+            # Se a lista de erros não estiver vazia, falhe o webhook
+            print(f"[Ticket {ticket_id}] A automação falhou. Retornando 500 para o GLPI.")
+            # Retorna a primeira mensagem de erro para o GLPI poder logar
+            return HttpResponseServerError(f"Falha na automação: {all_errors[0]}")
+        else:
+            # Sucesso
+            print(f"[Ticket {ticket_id}] Automação concluída com sucesso.")
+            return JsonResponse({"status": "sucesso"}, status=200)
