@@ -336,10 +336,9 @@ def get_ticket_items(ticket_id):
     )
     UNION ALL
     (
-        -- BLOCO NOBREAK CORRIGIDO
         SELECT
             ad.id AS id,
-            it.itemtype AS endpoint_name, -- 1. Corrigido
+            'Nobreak' AS endpoint_name,
             ad.name AS name,
             ad.states_id AS status_id
         FROM
@@ -348,15 +347,13 @@ def get_ticket_items(ticket_id):
             glpi_assets_assets AS ad ON it.items_id = ad.id
         WHERE
             it.tickets_id = %s
-            AND it.itemtype = 'nobreak' -- 2. Adicionado
             AND ad.assets_assetdefinitions_id = 26
     )
     UNION ALL
     (
-        -- BLOCO PROJETOR CORRIGIDO
         SELECT
             ad.id AS id,
-            it.itemtype AS endpoint_name, -- 1. Corrigido
+            'Projetor' AS endpoint_name,
             ad.name AS name,
             ad.states_id AS status_id
         FROM
@@ -365,7 +362,6 @@ def get_ticket_items(ticket_id):
             glpi_assets_assets AS ad ON it.items_id = ad.id
         WHERE
             it.tickets_id = %s
-            AND it.itemtype = 'projetor' -- 2. Adicionado
             AND ad.assets_assetdefinitions_id = 25
     )
     """
