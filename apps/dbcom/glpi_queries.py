@@ -51,11 +51,13 @@ def get_panel_data():
         gt.status AS 'idstatus'
         FROM glpi_tickets AS gt
         LEFT JOIN glpi_entities AS ge ON ge.id = gt.entities_id
-        LEFT JOIN glpi_tickets_users AS gtu ON gtu.tickets_id = gt.id -- Join de usuários (1 vez)
-        LEFT JOIN glpi_users AS gu ON gu.id = gtu.users_id -- Join de nomes (1 vez)
+        LEFT JOIN glpi_tickets_users AS gtu ON gtu.tickets_id = gt.id
+        LEFT JOIN glpi_users AS gu ON gu.id = gtu.users_id
         WHERE
             gt.status NOT IN (6)
             AND gt.is_deleted = 0
+            AND gt.name NOT LIKE '%TECOM%'
+            AND gt.name NOT LIKE '%manutenção corretiva%'
         GROUP BY
             gt.id,
             ge.name,
