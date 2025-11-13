@@ -237,8 +237,8 @@
     <ul class="legenda-lista">
         {% for motivo in motivos_legenda %}
             <li>
-                <strong>{{ motivo.codigo }}:</strong> {{ motivo.titulo }} 
-                <em>({{ motivo.descricao }})</em>
+                <strong>{{ motivo.codigo }}:</strong> {{ motivo.titulo }} <br>
+                <em>{{ motivo.descricao }}</em>
             </li>
         {% empty %}
             <li>Nenhum motivo de baixa foi selecionado para os itens.</li>
