@@ -264,3 +264,16 @@ def get_equipamentos_para_baixa():
     
     return db_glpi.fetch_query(sql)
 
+
+def get_fornecedores_glpi():
+    """
+    Busca os fornecedores do GLPI
+    """
+    if not db_glpi:
+        return []
+    
+    sql="""
+    SELECT id, name FROM glpi_suppliers WHERE is_deleted = 0 AND is_active = 1
+    """
+    
+    return db_glpi.fetch_query(sql)
