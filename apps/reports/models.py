@@ -179,7 +179,7 @@ class ItemLaudo(models.Model):
         verbose_name="Motivo da Baixa",
         on_delete=models.SET_NULL,
         null=True,
-        blank=False, # Força o usuário a escolher um motivo
+        blank=True, # Força o usuário a escolher um motivo
         help_text="Selecione o motivo da baixa para este item."
     )
 
