@@ -396,6 +396,9 @@ class ProtocoloReparoAdmin(admin.ModelAdmin):
         
         # Verifica se todas as nossas funções foram importadas
         if not (GLPI_IMPORT_DISPONIVEL and GLPI_API_DISPONIVEL and GLPI_SESSION_UTILS_DISPONIVEL):
+            print(GLPI_API_DISPONIVEL)
+            print(GLPI_IMPORT_DISPONIVEL)
+            print(GLPI_SESSION_UTILS_DISPONIVEL)
             self.message_user(request, "Erro: Funções de importação (SQL, API ou Sessão) não configuradas.", messages.ERROR)
             return
 
