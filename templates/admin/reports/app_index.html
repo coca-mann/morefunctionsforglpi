@@ -16,6 +16,28 @@
         nós criamos os blocos manualmente.
     -->
 
+    <table class="module">
+        <caption>
+            <a href="#" class="section" title="Configurações Gerais">
+                Configurações
+            </a>
+        </caption>
+        
+        <tr class="model-configuracaocabecalho">
+            <th scope="row">
+                <a href="{% url 'admin:reports_configuracaocabecalho_changelist' %}">
+                    Configuração do Cabeçalho
+                </a>
+            </th>
+            <td>&nbsp;</td> {# Sem botão 'Adicionar' #}
+            <td>
+                <a href="{% url 'admin:reports_configuracaocabecalho_changelist' %}" class="changelink">
+                    {% trans 'Change' %}
+                </a>
+            </td>
+        </tr>
+    </table>
+
     <!-- Bloco 1: Laudos Técnicos -->
     <table class="module">
         <caption>

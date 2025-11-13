@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
 # REMOVA A LINHA ABAIXO DO TOPO DO ARQUIVO:
 # from weasyprint import HTML 
-from .models import LaudoBaixa, MotivoBaixa, ProtocoloReparo
+from .models import LaudoBaixa, MotivoBaixa, ProtocoloReparo, ConfiguracaoCabecalho
 import datetime
 
 
@@ -29,19 +29,16 @@ def gerar_pdf_laudo_baixa(request, laudo_id):
     motivos_usados_ids = itens.values_list('motivo_baixa_id', flat=True).distinct()
     motivos_legenda = MotivoBaixa.objects.filter(id__in=motivos_usados_ids).order_by('codigo')
 
-    # 4. Dados da sua empresa
-    empresa_dados = {
-        'nome': "Nome da Sua Empresa LTDA",
-        'cnpj': "CNPJ: 00.000.000/0001-00",
-        'endereco': "Rua Exemplo, 123, Bairro, Cidade - UF",
-        'logo_url': "https://placehold.co/150x70/EFEFEF/333?text=LOGO" 
-    }
+
+    config = ConfiguracaoCabecalho.objects.first()
+    if not config:
+        return HttpResponse("Erro: Configuração de Cabeçalho não encontrada no Admin.", status=500)
 
     contexto = {
         'laudo': laudo,
         'itens': itens,
         'motivos_legenda': motivos_legenda,
-        'empresa': empresa_dados,
+        'config': config,
         'data_hoje': datetime.date.today(),
     }
 
@@ -72,19 +69,15 @@ def gerar_pdf_protocolo_reparo(request, protocolo_id):
     #    Usamos 'select_related' para otimizar, mas 'itens' já está pré-buscado
     itens = protocolo.itens.all().order_by('glpi_ticket_id')
 
-    # 3. Dados da empresa (reutilizados)
-    empresa_dados = {
-        'nome': "Nome da Sua Empresa LTDA",
-        'cnpj': "CNPJ: 00.000.000/0001-00",
-        'endereco': "Rua Exemplo, 123, Bairro, Cidade - UF",
-        'logo_url': "https://placehold.co/150x70/EFEFEF/333?text=LOGO" 
-    }
+    config = ConfiguracaoCabecalho.objects.first()
+    if not config:
+        return HttpResponse("Erro: Configuração de Cabeçalho não encontrada no Admin.", status=500)
 
     # 4. Contexto para o template
     contexto = {
         'protocolo': protocolo,
         'itens': itens,
-        'empresa': empresa_dados,
+        'config': config,
         'total_itens': itens.count(),
     }
 

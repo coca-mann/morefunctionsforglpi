@@ -158,12 +158,12 @@
         <tr>
             <td class="logo">
                 <!-- A URL do logo vem do 'empresa_dados' na view -->
-                <img src="{{ empresa.logo_url }}" alt="Logo da Empresa">
+                <img src="{{ config.logo.url }}" alt="Logo da Empresa">
             </td>
             <td class="company-info">
-                <strong>{{ empresa.nome }}</strong><br>
-                {{ empresa.cnpj }}<br>
-                {{ empresa.endereco }}
+                <strong>{{ config.nome_fantasia }}</strong><br>
+                {{ config.cnpj }}<br>
+                {{ config.endereco_completo }}
             </td>
         </tr>
     </table>
@@ -265,7 +265,7 @@
     <div class="assinaturas">
         <div class="data-local">
             <!-- Substitua 'Sua Cidade' pela sua localidade -->
-            Sua Cidade, {{ laudo.data_laudo|date:"d \d\e F \d\e Y" }}.
+            Porto Velho/RO, {{ laudo.data_laudo|date:"d \d\e F \d\e Y" }}.
         </div>
 
         <div class="assinatura-bloco">
@@ -277,13 +277,11 @@
         <div class="assinatura-bloco">
             <div class="linha-assinatura"></div>
             <div class="nome-assinatura">Gestor do Setor (TI)</div>
-            <div class="cargo-assinatura">Nome do Gestor</div>
         </div>
 
         <div class="assinatura-bloco">
             <div class="linha-assinatura"></div>
             <div class="nome-assinatura">Diretor Aprovador</div>
-            <div class="cargo-assinatura">Nome do Diretor</div>
         </div>
     </div>
 </body>

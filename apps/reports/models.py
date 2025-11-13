@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
-from django.contrib import admin
+from django.core.exceptions import ValidationError
 
 
 
@@ -330,4 +330,51 @@ class ProtocoloReparoProxy(ProtocoloReparo):
         proxy = True
         verbose_name = "Protocolo de Envio para Reparo"
         verbose_name_plural = "Protocolos de Envio para Reparo"
+
+
+class ConfiguracaoCabecalho(models.Model):
+    """
+    Modelo Singleton para armazenar os dados da empresa
+    que aparecem nos cabeçalhos dos relatórios.
+    """
+    logo = models.ImageField(
+        "Logo da Empresa",
+        upload_to='logos/',
+        null=True, blank=False,
+        help_text="Faça upload da imagem da logo (ex: .png, .jpg)"
+    )
+    nome_fantasia = models.CharField(
+        "Nome Fantasia", 
+        max_length=255
+    )
+    cnpj = models.CharField(
+        "CNPJ", 
+        max_length=18, # Formato: 00.000.000/0001-00
+        help_text="Ex: 00.000.000/0001-00"
+    )
+    endereco_completo = models.CharField(
+        "Endereço Completo", 
+        max_length=500,
+        help_text="Ex: Rua Exemplo, 123, Bairro, Cidade - UF, CEP 00000-000"
+    )
+
+    class Meta:
+        verbose_name = "Configuração do Cabeçalho"
+        verbose_name_plural = "Configurações do Cabeçalho"
+
+    def __str__(self):
+        return f"Configuração do Cabeçalho ({self.nome_fantasia})"
+
+    def save(self, *args, **kwargs):
+        """
+        Garante que apenas um objeto ConfiguracaoCabecalho exista.
+        (Padrão Singleton)
+        """
+        if not self.pk and ConfiguracaoCabecalho.objects.exists():
+            raise ValidationError(
+                'Só pode haver uma instância de Configuração de Cabeçalho. '
+                'Edite a existente em vez de criar uma nova.'
+            )
+        return super(ConfiguracaoCabecalho, self).save(*args, **kwargs)
+
 

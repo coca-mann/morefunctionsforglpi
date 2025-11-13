@@ -6,7 +6,7 @@ from django.contrib import admin, messages
 from django.db.models import Count, Q
 from .models import (
     MotivoBaixa, LaudoBaixa, ItemLaudo, LaudoTecnico,
-    ProtocoloReparo, ItemReparo, ProtocoloReparoProxy
+    ProtocoloReparo, ItemReparo, ProtocoloReparoProxy, ConfiguracaoCabecalho
 )
 from .forms import LaudoBaixaForm, ProtocoloReparoForm
 
@@ -518,3 +518,49 @@ class ProtocoloReparoProxyAdmin(admin.ModelAdmin):
     def has_module_permission(self, request):
         return True # Mostra na página inicial
 
+
+@admin.register(ConfiguracaoCabecalho)
+class ConfiguracaoCabecalhoAdmin(admin.ModelAdmin):
+    """
+    Admin para o Singleton de Configuração de Cabeçalho.
+    Redireciona o usuário da 'lista' direto para o 'formulário'.
+    """
+    list_display = ('nome_fantasia', 'cnpj', 'endereco_completo')
+    
+    def has_add_permission(self, request):
+        """ Desabilita o botão 'Adicionar' se já existir um registro. """
+        return not ConfiguracaoCabecalho.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        """ Desabilita a ação de 'Deletar'. """
+        return False
+
+    # --- 2. ADICIONE ESTA FUNÇÃO ---
+    def has_module_permission(self, request):
+        """ 
+        Esconde este modelo da página *principal* do admin.
+        O link será colocado manualmente no 'app_index.html'.
+        """
+        return False
+
+    # --- 3. ADICIONE ESTA FUNÇÃO ---
+    def changelist_view(self, request, extra_context=None):
+        """
+        Sobrescreve a 'página de lista' (changelist) para redirecionar.
+        """
+        # Tenta pegar o primeiro (e único) objeto
+        obj = self.model.objects.first()
+        
+        if obj:
+            # Se o objeto existe, redireciona para a página de EDIÇÃO
+            url = reverse(
+                f'admin:{self.model._meta.app_label}_{self.model._meta.model_name}_change',
+                args=[obj.pk]
+            )
+        else:
+            # Se não existe, redireciona para a página de ADIÇÃO
+            url = reverse(
+                f'admin:{self.model._meta.app_label}_{self.model._meta.model_name}_add'
+            )
+        
+        return HttpResponseRedirect(url)

@@ -146,12 +146,12 @@
     <table class="header-table">
         <tr>
             <td class="logo">
-                <img src="{{ empresa.logo_url }}" alt="Logo">
+                <img src="{{ config.logo.url }}" alt="Logo">
             </td>
             <td class="company-info">
-                <strong>{{ empresa.nome }}</strong><br>
-                {{ empresa.cnpj }}<br>
-                {{ empresa.endereco }}
+                <strong>{{ config.nome_fantasia }}</strong><br>
+                {{ config.cnpj }}<br>
+                {{ config.endereco_completo }}
             </td>
         </tr>
     </table>
@@ -212,12 +212,12 @@
         <div class="signature-block">
             <div class="signature-line"></div>
             <div class="signature-name">{{ protocolo.glpi_fornecedor_nome }}</div>
-            <div class="signature-title">Recebido por (Fornecedor)</div>
+            <div class="signature-title">Fornecedor</div>
         </div>
         <div class="signature-block">
             <div class="signature-line"></div>
             <div class="signature-name">{{ protocolo.tecnico_nome_completo }}</div>
-            <div class="signature-title">Enviado por (Empresa)</div>
+            <div class="signature-title">Técnico</div>
         </div>
     </div>
 
