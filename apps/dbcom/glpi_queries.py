@@ -275,5 +275,30 @@ def get_fornecedores_glpi():
     sql="""
     SELECT id, name FROM glpi_suppliers WHERE is_deleted = 0 AND is_active = 1
     """
-    
+
     return db_glpi.fetch_query(sql)
+
+
+def get_chamados_reparo_pendentes_sql():
+    """
+    Busca os IDs, Nomes e Conteúdo dos chamados de reparo.
+    Esta é a "Query Mestra" (Passo 2).
+    """
+
+    if not db_glpi:
+        return []
+    
+    sql = """
+        SELECT t.id, t.name, t.content 
+        FROM glpi_tickets t 
+        WHERE 
+            ((t.name LIKE '%TECOM%') OR 
+             (t.name LIKE '%manutenção corretiva%') OR 
+             (t.name LIKE '%manutenção preventiva%')) 
+        AND t.status IN (1, 2) 
+        AND t.is_deleted = 0
+        ORDER BY t.id
+    """
+
+    return db_glpi.fetch_query(sql)
+

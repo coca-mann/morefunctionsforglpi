@@ -41,6 +41,27 @@
         </tr>
     </table>
 
+    <table class="module">
+        <caption>
+            <a href="#" class="section" title="Módulo de Protocolos de Reparo">
+                Protocolo de Envio para Reparo
+            </a>
+        </caption>
+        
+        <!-- Link para 'Protocolos de Reparo' -->
+        <tr class="model-protocoloreparo">
+            <th scope="row">
+                <a href="{% url 'admin:reports_protocoloreparo_changelist' %}">Protocolos de Reparo</a>
+            </th>
+            <td><a href="{% url 'admin:reports_protocoloreparo_add' %}" class="addlink">{% trans 'Add' %}</a></td>
+            <td><a href="{% url 'admin:reports_protocoloreparo_changelist' %}" class="changelink">{% trans 'Change' %}</a></td>
+        </tr>
+        <!-- 
+            Nota: Não adicionamos 'ItemReparo' aqui porque ele é um
+            'inline' gerenciado de dentro do 'ProtocoloReparo'.
+        -->
+    </table>
+
     <!-- 
         Bloco 2: (Exemplo futuro)
         Quando você tiver outros relatórios, basta criar uma nova tabela.

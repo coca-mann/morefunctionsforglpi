@@ -1,6 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
+from django.contrib import admin
+
+
 
 class MotivoBaixa(models.Model):
     """
@@ -202,3 +205,129 @@ class LaudoTecnico(LaudoBaixa):
         # Este é o nome que aparecerá no menu do admin
         verbose_name = "Laudo Técnico para Baixa Patrimonial"
         verbose_name_plural = "Laudos Técnicos para Baixa Patrimonial"
+
+
+class ProtocoloReparo(models.Model):
+    """
+    O registro "pai" do Protocolo de Envio para Reparo.
+    """
+    numero_documento = models.CharField(
+        "Nº do Documento",
+        max_length=20,
+        unique=True,
+        editable=False,
+        help_text="Gerado automaticamente ao salvar. Ex: PRE-2025-001"
+    )
+    data_protocolo = models.DateField(
+        "Data do Protocolo",
+        default=timezone.now
+    )
+    tecnico_responsavel = models.ForeignKey(
+        User,
+        verbose_name="Técnico Responsável",
+        on_delete=models.PROTECT
+    )
+    # Vamos salvar o ID e o Nome do Fornecedor (vindo do GLPI)
+    glpi_fornecedor_id = models.IntegerField(
+        "ID Fornecedor GLPI",
+        null=True, blank=False # Não pode ser nulo após selecionado
+    )
+    glpi_fornecedor_nome = models.CharField(
+        "Nome do Fornecedor",
+        max_length=255,
+        null=True, blank=False
+    )
+
+    class Meta:
+        verbose_name = "Protocolo de Reparo"
+        verbose_name_plural = "Protocolos de Reparo"
+        ordering = ['-numero_documento']
+
+    def __str__(self):
+        return f"{self.numero_documento} - {self.glpi_fornecedor_nome or 'N/A'}"
+
+    def save(self, *args, **kwargs):
+        # Lógica para gerar o número do documento automático
+        if not self.pk:
+            ano_atual = timezone.now().year
+            prefixo = 'PRE'
+            
+            ultimo_protocolo = ProtocoloReparo.objects.filter(
+                numero_documento__startswith=f'{prefixo}-{ano_atual}'
+            ).order_by('numero_documento').last()
+
+            novo_numero_seq = 1
+            if ultimo_protocolo:
+                try:
+                    ultimo_seq_str = ultimo_protocolo.numero_documento.split('-')[-1]
+                    novo_numero_seq = int(ultimo_seq_str) + 1
+                except (ValueError, IndexError):
+                    pass
+            
+            self.numero_documento = f'{prefixo}-{ano_atual}-{novo_numero_seq:03d}'
+        
+        super().save(*args, **kwargs)
+
+    @property
+    def tecnico_nome_completo(self):
+        """ Retorna o nome completo do usuário do Django. """
+        if self.tecnico_responsavel:
+            return self.tecnico_responsavel.get_full_name()
+        return "N/A"
+
+
+class ItemReparo(models.Model):
+    """
+    Um equipamento ("item filho") associado a um Protocolo de Reparo.
+    Os dados são copiados do GLPI (Ticket + Item).
+    """
+    protocolo = models.ForeignKey(
+        ProtocoloReparo,
+        verbose_name="Protocolo",
+        on_delete=models.CASCADE,
+        related_name="itens"
+    )
+    
+    # --- Dados copiados do GLPI ---
+    glpi_ticket_id = models.IntegerField("ID Ticket GLPI")
+    glpi_item_id = models.IntegerField("ID Item GLPI")
+    glpi_item_tipo = models.CharField("Tipo Item GLPI", max_length=255)
+    
+    nome_item = models.CharField("Nome do Equipamento", max_length=255)
+    numero_serie = models.CharField("Nº de Série", max_length=100, null=True, blank=True)
+    numero_patrimonio = models.CharField("Nº Patrimônio", max_length=50, null=True, blank=True)
+    
+    titulo_ticket = models.TextField("Título do Chamado", null=True, blank=True)
+    observacao_ticket = models.TextField("Observação do Chamado", null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Item de Reparo"
+        verbose_name_plural = "Itens de Reparo"
+        # Garante que um item de um ticket não seja adicionado duas vezes
+        # NO MESMO protocolo
+        unique_together = ('protocolo', 'glpi_ticket_id', 'glpi_item_id')
+
+    def __str__(self):
+        return self.nome_item
+
+    @property
+    def tipo_equipamento_formatado(self):
+        """ 
+        Formata o tipo de item para ser legível.
+        Ex: "Glpi\CustomAsset\nobreakAsset" -> "Nobreak"
+        """
+        if self.glpi_item_tipo:
+            return self.glpi_item_tipo.split('\\')[-1].replace('Asset', '').upper()
+        return 'N/A'
+
+
+class ProtocoloReparoProxy(ProtocoloReparo):
+    """
+    Modelo Proxy usado para criar um 'atalho' no menu principal do admin
+    para o módulo de Protocolos de Reparo.
+    """
+    class Meta:
+        proxy = True
+        verbose_name = "Protocolo de Envio para Reparo"
+        verbose_name_plural = "Protocolos de Envio para Reparo"
+

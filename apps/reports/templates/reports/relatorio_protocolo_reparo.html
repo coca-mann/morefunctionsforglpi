@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Protocolo - {{ protocolo.numero_documento }}</title>
+    <style>
+        /* --- Configuração da Página --- */
+        @page {
+            size: A4 landscape; /* Orientação Paisagem */
+            margin: 0.5cm; /* Margens */
+
+            /* Rodapé */
+            @bottom-right {
+                content: "Página " counter(page) " de " counter(pages);
+                font-size: 8pt;
+                color: #555;
+            }
+        }
+
+        /* --- Estilos Gerais --- */
+        body {
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            font-size: 9pt; /* Fonte pequena para caber tudo */
+            line-height: 1.3;
+            color: #333;
+        }
+
+        h1 {
+            font-family: 'Arial Black', 'Arial Bold', sans-serif;
+            font-size: 16pt;
+            text-align: center;
+            margin-bottom: 5px;
+            color: #222;
+        }
+        h2 {
+            font-size: 10pt;
+            text-align: center;
+            margin-top: 0;
+            font-weight: normal;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 10px;
+        }
+
+        /* --- Cabeçalho (Logo e Info Empresa) --- */
+        .header-table {
+            width: 100%;
+            border-bottom: 2px solid #000;
+            margin-bottom: 10px;
+        }
+        .header-table td { vertical-align: middle; padding-bottom: 10px; }
+        .logo img { max-width: 150px; max-height: 70px; }
+        .company-info {
+            text-align: right;
+            font-size: 8pt;
+            line-height: 1.3;
+        }
+
+        /* --- Tabela de Informações do Protocolo --- */
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #aaa;
+            margin-bottom: 15px;
+        }
+        .info-table td {
+            padding: 5px 8px;
+            border: 1px solid #ccc;
+        }
+        .info-table td.label {
+            font-weight: bold;
+            background-color: #f4f4f4;
+            width: 120px;
+        }
+
+        /* --- Tabela de Itens (7 colunas) --- */
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 8pt; /* Fonte muito pequena é necessária */
+            margin-bottom: 15px;
+            page-break-inside: auto; /* Permite que a tabela quebre entre páginas */
+        }
+        .items-table th, .items-table td {
+            border: 1px solid #aaa;
+            padding: 4px;
+            text-align: left;
+            word-wrap: break-word; /* Quebra palavras longas */
+        }
+        .items-table th {
+            background-color: #e0e0e0;
+            font-weight: bold;
+            padding: 5px 4px;
+        }
+        .items-table tr {
+            page-break-inside: avoid; /* Tenta manter a linha inteira */
+        }
+        
+        /* Largura das colunas (ajuste conforme necessário) */
+        .col-ticket { width: 8%; }
+        .col-tipo { width: 8%; }
+        .col-nome { width: 15%; }
+        .col-patr { width: 8%; }
+        .col-serie { width: 12%; }
+        .col-titulo { width: 22%; }
+        .col-obs { width: 27%; }
+
+
+        /* --- Rodapé (Total e Assinaturas) --- */
+        .totalizer {
+            font-size: 11pt;
+            font-weight: bold;
+            text-align: right;
+            margin-top: 20px;
+            page-break-before: avoid;
+        }
+
+        .signatures {
+            margin-top: 50px;
+            width: 100%;
+            page-break-inside: avoid;
+        }
+        .signature-block {
+            display: inline-block;
+            width: 48%; /* Duas colunas */
+            text-align: center;
+            font-size: 10pt;
+        }
+        .signature-line {
+            border-bottom: 1px solid #555;
+            margin: 0 30px; /* Margem interna */
+            padding-top: 50px; /* Espaço para assinar */
+        }
+        .signature-name {
+            font-weight: bold;
+            margin-top: 8px;
+        }
+        .signature-title {
+            font-style: italic;
+            color: #555;
+        }
+
+    </style>
+</head>
+<body>
+
+    <table class="header-table">
+        <tr>
+            <td class="logo">
+                <img src="{{ empresa.logo_url }}" alt="Logo">
+            </td>
+            <td class="company-info">
+                <strong>{{ empresa.nome }}</strong><br>
+                {{ empresa.cnpj }}<br>
+                {{ empresa.endereco }}
+            </td>
+        </tr>
+    </table>
+
+    <h1>PROTOCOLO DE REPARO DE EQUIPAMENTO</h1>
+
+    <table class="info-table">
+        <tr>
+            <td class="label">Fornecedor:</td>
+            <td><strong>{{ protocolo.glpi_fornecedor_nome }}</strong></td>
+            <td class="label">Data de Emissão:</td>
+            <td>{{ protocolo.data_protocolo|date:"d/m/Y" }}</td>
+        </tr>
+        <tr>
+            <td class="label">Téc. Responsável:</td>
+            <td>{{ protocolo.tecnico_nome_completo }}</td>
+            <td class="label">Nº Protocolo:</td>
+            <td><strong>{{ protocolo.numero_documento }}</strong></td>
+        </tr>
+    </table>
+
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th class="col-ticket">Ticket</th>
+                <th class="col-tipo">Tipo</th>
+                <th class="col-nome">Equipamento</th>
+                <th class="col-patr">Patrimônio</th>
+                <th class="col-serie">Nº de Série</th>
+                <th class="col-titulo">Título Chamado</th>
+                <th class="col-obs">Observação</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in itens %}
+            <tr>
+                <td>{{ item.glpi_ticket_id }}</td>
+                <td>{{ item.tipo_equipamento_formatado }}</td>
+                <td>{{ item.nome_item }}</td>
+                <td>{{ item.numero_patrimonio|default:"—" }}</td>
+                <td>{{ item.numero_serie|default:"—" }}</td>
+                <td>{{ item.titulo_ticket|default:"—" }}</td>
+                <td>{{ item.observacao_ticket|default:"—" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" style="text-align: center;">Nenhum item foi importado para este protocolo.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <p class="totalizer">
+        Quantidade Total de Itens: {{ total_itens }}
+    </p>
+
+    <div class="signatures">
+        <div class="signature-block">
+            <div class="signature-line"></div>
+            <div class="signature-name">{{ protocolo.glpi_fornecedor_nome }}</div>
+            <div class="signature-title">Recebido por (Fornecedor)</div>
+        </div>
+        <div class="signature-block">
+            <div class="signature-line"></div>
+            <div class="signature-name">{{ protocolo.tecnico_nome_completo }}</div>
+            <div class="signature-title">Enviado por (Empresa)</div>
+        </div>
+    </div>
+
+</body>
+</html>

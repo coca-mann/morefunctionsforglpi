@@ -9,4 +9,9 @@ urlpatterns = [
         views.gerar_pdf_laudo_baixa,
         name='gerar_pdf_laudo_baixa'
     ),
+    path(
+        'protocolo/<int:protocolo_id>/pdf/', 
+        views.gerar_pdf_protocolo_reparo, 
+        name='gerar_pdf_protocolo_reparo'
+    ),
 ]
