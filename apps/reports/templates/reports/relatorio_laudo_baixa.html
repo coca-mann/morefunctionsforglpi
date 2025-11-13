@@ -136,6 +136,7 @@
             width: 32%;
             margin-top: 10px;
             font-size: 10pt;
+            vertical-align: top;
         }
         .linha-assinatura {
             border-bottom: 1px solid #555;
@@ -203,22 +204,22 @@
     <table class="items-table">
         <thead>
             <tr>
-                <th>Patrimônio</th>
                 <th>Equipamento</th>
                 <th>Marca</th>
                 <th>Modelo</th>
                 <th>Nº de Série</th>
+                <th>Patrimônio</th>
                 <th class="center">Motivo</th>
             </tr>
         </thead>
         <tbody>
             {% for item in itens %}
             <tr>
-                <td>{{ item.numero_patrimonio|default:"-" }}</td>
                 <td>{{ item.tipo_equipamento }}</td>
                 <td>{{ item.marca_equipamento|default:"-" }}</td>
                 <td>{{ item.modelo_equipamento|default:"-" }}</td>
                 <td>{{ item.numero_serie|default:"-" }}</td>
+                <td>{{ item.numero_patrimonio|default:"-" }}</td>
                 <td class="center">
                     <!-- Mostra o código do motivo, ou N/A se não selecionado -->
                     {{ item.motivo_baixa.codigo|default:"N/A" }}
