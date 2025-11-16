@@ -6,7 +6,7 @@ from django.http import JsonResponse, HttpResponseRedirect
 from django.urls import reverse
 import json
 import mysql.connector
-from .models import ExternalDbConfig, GLPIConfig
+from .models import ExternalDbConfig, GLPIConfig, AutomationRule, GLPIWebhook
 
 # --- Formulário Customizado ---
 # (Este formulário é para o caso de usarmos criptografia, 
@@ -120,7 +120,6 @@ class ExternalDbConfigAdmin(admin.ModelAdmin):
 @admin.register(GLPIConfig)
 class GLPIConfigAdmin(admin.ModelAdmin):
     # Atualiza o list_display com os novos campos
-    list_display = ('glpi_api_url', 'glpi_app_token', 'glpi_user_token', 'status_ticket_pendente_id')
     
     fieldsets = (
         ('Configuração da API Legada (v1)', {
@@ -128,18 +127,6 @@ class GLPIConfigAdmin(admin.ModelAdmin):
                 'glpi_api_url', 
                 'glpi_app_token', 
                 'glpi_user_token', 
-            )
-        }),
-        ('Configuração do Webhook', {
-            'fields': ('webhook_secret_key',)
-        }),
-        ('Regras de Empréstimo (IDs)', {
-            'fields': (
-                'status_emprestimo_id', 
-                'status_operacional_id',
-                'status_ticket_pendente_id', 
-                'status_ticket_solucionado_id',
-                'status_ticket_atendimento_id'
             )
         }),
     )
@@ -189,4 +176,40 @@ class GLPIConfigAdmin(admin.ModelAdmin):
     def response_change(self, request, obj):
         self.message_user(request, "Configuração salva com sucesso.")
         return HttpResponseRedirect(request.path)
+
+
+# Define as Regras como "linhas" dentro do Webhook
+class AutomationRuleInline(admin.TabularInline):
+    model = AutomationRule
+    extra = 1 # Começa com 1 linha em branco para nova regra
+    fields = (
+        'name', 
+        'trigger_category_id', 
+        'trigger_pending_id', 
+        'trigger_solve_ids', 
+        'target_asset_status_on_pending', 
+        'target_asset_status_on_solve',
+        'is_active'
+    )
+    verbose_name = "Regra de Automação"
+    verbose_name_plural = "Regras de Automação para este Webhook"
+
+
+@admin.register(GLPIWebhook)
+class GLPIWebhookAdmin(admin.ModelAdmin):
+    list_display = ('name', 'id', 'get_url')
+    # Mostra a URL gerada (somente leitura)
+    readonly_fields = ('get_url',)
     
+    fieldsets = (
+        (None, {
+            'fields': ('name', 'secret_key')
+        }),
+        ('URL (Copie e cole no GLPI)', {
+            'fields': ('get_url',)
+        }),
+    )
+    
+    # Adiciona as regras na parte de baixo da página do Webhook
+    inlines = [AutomationRuleInline]
+

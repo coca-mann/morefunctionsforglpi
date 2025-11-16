@@ -302,3 +302,51 @@ def get_chamados_reparo_pendentes_sql():
 
     return db_glpi.fetch_query(sql)
 
+
+def get_category_parent_id(category_id: int):
+    """
+    Busca o ID da categoria pai (itilcategories_id) de uma determinada categoria.
+    Retorna o ID pai (int), ou 0 se for a raiz.
+    """
+    if not db_glpi:
+        print("[DEBUG] FALHA (get_category_parent_id): db_glpi não está inicializado.")
+        return None  # Retorna None para parar o loop na view
+
+    sql = """
+    SELECT ic.itilcategories_id FROM glpi_itilcategories ic WHERE ic.id = %s
+    """
+    params = (category_id,)
+
+    try:
+        # 'results' será uma lista, ex: [{'itilcategories_id': 140}] ou [(140,)]
+        results = db_glpi.fetch_query(sql, params)
+
+        # 1. Verifica se a query retornou algo
+        if results:
+            # 2. Pega a primeira linha (deve ser a única)
+            first_row = results[0]
+            
+            # 3. Extrai o valor
+            parent_id = 0 # Padrão
+            
+            # Se sua fetch_query retorna dicionários (ex: [{'itilcategories_id': 140}])
+            if isinstance(first_row, dict):
+                parent_id = first_row.get('itilcategories_id')
+            # Se sua fetch_query retorna tuplas (ex: [(140,)])
+            else:
+                parent_id = first_row[0]
+            
+            # Se o ID pai for None (é a raiz), retorna 0
+            if parent_id is None:
+                return 0
+                
+            return int(parent_id)  # Retorna o NÚMERO (ex: 140)
+        else:
+            # Categoria não foi encontrada
+            print(f"[DEBUG] Categoria ID {category_id} não encontrada no banco.")
+            return None # Para o loop
+
+    except Exception as e:
+        print(f"[DEBUG] ERRO CRÍTICO AO EXECUTAR 'get_category_parent_id': {e}")
+        return None  # Retorna None para parar o loop
+

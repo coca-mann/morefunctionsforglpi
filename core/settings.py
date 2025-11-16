@@ -33,6 +33,8 @@ DEBUG = False
 
 ALLOWED_HOSTS = ['*']
 
+BASE_URL = os.getenv('BASE_URL')
+
 
 # Application definition
 
