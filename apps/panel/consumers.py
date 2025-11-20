@@ -4,9 +4,10 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 from asgiref.sync import sync_to_async
-from apps.dbcom.glpi_queries import get_panel_data, newpanel_dashboard_ticketcounter
+from apps.dbcom.glpi_queries import get_panel_data, newpanel_dashboard_ticketcounter, newpanel_dashboard_responsetimeavg, tickets_resolved_today, newpanel_dashboard_clientsatisfactionpercent, newpanel_dashboard_departmentteam
 from apps.panel.models import DashboardSettings
 from datetime import datetime
+from decimal import Decimal
 
 class PanelConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -121,11 +122,50 @@ class PanelConsumer(AsyncWebsocketConsumer):
     async def send_dashboard_kpi_data(self):
         counter_data = await sync_to_async(newpanel_dashboard_ticketcounter)()
         
-        kpis = counter_data[0] if counter_data else {
+        kpis = counter_data[0] if counter_data and counter_data[0] else {
             'total_hoje': 0,
             'total_ontem': 0,
             'diferenca': 0
         }
+
+        # Fetch response time data
+        responsetime_data = await sync_to_async(newpanel_dashboard_responsetimeavg)()
+        if responsetime_data and responsetime_data[0]:
+            # Convert decimal values to string for JSON serialization
+            rt_kpis = {k: str(v) if v is not None else None for k, v in responsetime_data[0].items()}
+            kpis.update(rt_kpis)
+        else:
+            kpis.update({
+                'solucao_mes_atual': None,
+                'solucao_mes_passado': None,
+                'diferenca_segundos': None
+            })
+
+        
+        # Fetch resolved today data
+        resolved_today_data = await sync_to_async(tickets_resolved_today)()
+        resolved_today_count = resolved_today_data[0].get('Solved_today', 0) if resolved_today_data else 0
+        kpis['resolved_today'] = resolved_today_count
+
+        # Fetch satisfaction data
+        satisfaction_data = await sync_to_async(newpanel_dashboard_clientsatisfactionpercent)()
+        if satisfaction_data and satisfaction_data[0]:
+            satisfaction_kpis = {k: str(v) if v is not None else None for k, v in satisfaction_data[0].items()}
+            kpis.update(satisfaction_kpis)
+        else:
+            kpis.update({
+                'porcentagem_satisfacao': '0.00',
+                'qtd_pesquisas_respondidas': 0
+            })
+        
+        # Fetch team data
+        team_data = await sync_to_async(newpanel_dashboard_departmentteam)()
+        # Explicitly convert Decimal to string/int for each member in the list
+        processed_team_data = []
+        for member in team_data:
+            processed_member = {k: str(v) if isinstance(v, Decimal) else v for k, v in member.items()}
+            processed_team_data.append(processed_member)
+        kpis['team_members'] = processed_team_data
 
         response = {
             'type': 'dashboard_update',

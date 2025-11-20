@@ -369,3 +369,119 @@ def newpanel_dashboard_ticketcounter():
         
     return db_glpi.fetch_query(sql)
 
+
+def newpanel_dashboard_responsetimeavg():
+    if not db_glpi:
+        return []
+    
+    sql="""
+    SELECT 
+    SEC_TO_TIME(AVG(CASE WHEN DATE_FORMAT(date, '%Y-%m') = DATE_FORMAT(CURRENT_DATE(), '%Y-%m') THEN solve_delay_stat END)) AS solucao_mes_atual,
+    SEC_TO_TIME(AVG(CASE WHEN DATE_FORMAT(date, '%Y-%m') = DATE_FORMAT(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH), '%Y-%m') THEN solve_delay_stat END)) AS solucao_mes_passado,
+    (AVG(CASE WHEN DATE_FORMAT(date, '%Y-%m') = DATE_FORMAT(CURRENT_DATE(), '%Y-%m') THEN solve_delay_stat END) -
+     AVG(CASE WHEN DATE_FORMAT(date, '%Y-%m') = DATE_FORMAT(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH), '%Y-%m') THEN solve_delay_stat END)) AS diferenca_segundos
+    FROM 
+        glpi_tickets
+    WHERE 
+    is_deleted = 0
+    AND date >= DATE_SUB(CURRENT_DATE(), INTERVAL 2 MONTH);
+    """
+        
+    return db_glpi.fetch_query(sql)
+
+
+def newpanel_dashboard_clientsatisfactionpercent():
+    if not db_glpi:
+        return []
+    
+    sql="""
+    SELECT 
+    COUNT(S.id) AS qtd_pesquisas_respondidas,
+    ROUND(AVG(S.satisfaction), 2) AS media_estrelas,
+    ROUND((AVG(S.satisfaction) / 5) * 100, 2) AS porcentagem_satisfacao
+    FROM 
+        glpi_ticketsatisfactions S
+    INNER JOIN 
+        glpi_tickets T ON S.tickets_id = T.id
+    WHERE 
+    S.date_answered IS NOT NULL
+    AND T.is_deleted = 0
+    """
+        
+    return db_glpi.fetch_query(sql)
+
+
+def newpanel_dashboard_departmentteam():
+    if not db_glpi:
+        return []
+    
+    sql="""
+    SELECT 
+    CONCAT(U.firstname, ' ', U.realname) AS nome_completo,
+    U.name AS login,
+    CASE 
+        WHEN G.name LIKE '%Analistas%' THEN 'Analistas'
+        WHEN G.name LIKE '%Técnicos%' THEN 'Técnicos'
+        ELSE G.name 
+    END AS grupo_perfil,
+    (SELECT COUNT(DISTINCT TU.tickets_id)
+     FROM glpi_tickets_users TU
+     INNER JOIN glpi_tickets T ON TU.tickets_id = T.id
+     WHERE TU.users_id = U.id 
+       AND TU.type = 2
+       AND T.is_deleted = 0
+       AND T.status NOT IN (6)
+    ) AS qtd_tickets_atribuidos,
+    (SELECT COUNT(P.id)
+     FROM glpi_projects P
+     WHERE P.is_deleted = 0
+       AND (
+           EXISTS (
+               SELECT 1 
+               FROM glpi_projectteams PT 
+               WHERE PT.projects_id = P.id 
+                 AND PT.itemtype = 'User' 
+                 AND PT.items_id = U.id
+           )
+           OR 
+           EXISTS (
+               SELECT 1 
+               FROM glpi_projecttasks PTASK
+               INNER JOIN glpi_projecttaskteams PTT ON PTASK.id = PTT.projecttasks_id
+               WHERE PTASK.projects_id = P.id 
+                 AND PTT.itemtype = 'User' 
+                 AND PTT.items_id = U.id
+           )
+       )
+    ) AS qtd_projetos_relacionados,
+    (
+        IFNULL((SELECT COUNT(id) 
+                FROM glpi_tickettasks 
+                WHERE users_id_tech = U.id 
+                  AND state = 0), 0) 
+        + 
+        IFNULL((SELECT COUNT(PTT.id) 
+                FROM glpi_projecttaskteams PTT
+                INNER JOIN glpi_projecttasks PTASK ON PTT.projecttasks_id = PTASK.id
+                INNER JOIN glpi_projects PROJ ON PTASK.projects_id = PROJ.id
+                WHERE PTT.itemtype = 'User' 
+                  AND PTT.items_id = U.id
+                  AND PROJ.projectstates_id != 3
+               ), 0)
+    ) AS qtd_total_tarefas
+    FROM 
+        glpi_users U
+    INNER JOIN 
+        glpi_groups_users GU ON U.id = GU.users_id
+    INNER JOIN 
+        glpi_groups G ON GU.groups_id = G.id
+    WHERE 
+        U.is_deleted = 0 
+        AND U.is_active = 1
+        AND (G.name LIKE '%Analistas%' OR G.name LIKE '%Técnicos%')
+    ORDER BY 
+    grupo_perfil, nome_completo;
+    """
+    
+    return db_glpi.fetch_query(sql)
+
