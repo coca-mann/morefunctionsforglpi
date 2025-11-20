@@ -485,3 +485,49 @@ def newpanel_dashboard_departmentteam():
     
     return db_glpi.fetch_query(sql)
 
+
+def newpanel_projects_data():
+    if not db_glpi:
+        return []
+    
+    sql="""
+    SELECT 
+    P.name AS nome_projeto,
+    PS.name AS estado,
+    PS.color AS cor_estado,
+    CASE 
+        WHEN P.users_id > 0 THEN CONCAT(U.realname, ' ', U.firstname) 
+        WHEN P.groups_id > 0 THEN G.name 
+        ELSE 'Não Atribuído' 
+    END AS responsavel,
+    SUM(CASE WHEN PT.projectstates_id = 3 THEN 1 ELSE 0 END) AS tarefas_concluidas,
+    SUM(CASE WHEN PT.projectstates_id IN (2, 4) THEN 1 ELSE 0 END) AS tarefas_em_andamento,
+    SUM(CASE 
+        WHEN PT.id IS NOT NULL AND (PT.projectstates_id = 1) THEN 1 
+        ELSE 0 
+    END) AS tarefas_pendentes,
+    P.percent_done AS progresso_geral_projeto,
+    COALESCE(P.real_end_date, P.plan_end_date) AS data_entrega_vigente,
+    P.plan_end_date AS data_planeada,
+    P.real_end_date AS data_efetiva
+    FROM 
+        glpi_projects P
+    LEFT JOIN 
+        glpi_projectstates PS ON P.projectstates_id = PS.id
+    LEFT JOIN 
+        glpi_users U ON P.users_id = U.id
+    LEFT JOIN 
+        glpi_groups G ON P.groups_id = G.id
+    LEFT JOIN 
+        glpi_projecttasks PT ON P.id = PT.projects_id
+    WHERE 
+        P.is_deleted = 0
+    GROUP BY 
+        P.id
+    ORDER BY 
+    data_entrega_vigente ASC;
+    """
+    
+    return db_glpi.fetch_query(sql)
+
+

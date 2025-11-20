@@ -4,9 +4,9 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 from asgiref.sync import sync_to_async
-from apps.dbcom.glpi_queries import get_panel_data, newpanel_dashboard_ticketcounter, newpanel_dashboard_responsetimeavg, tickets_resolved_today, newpanel_dashboard_clientsatisfactionpercent, newpanel_dashboard_departmentteam
+from apps.dbcom.glpi_queries import get_panel_data, newpanel_dashboard_ticketcounter, newpanel_dashboard_responsetimeavg, tickets_resolved_today, newpanel_dashboard_clientsatisfactionpercent, newpanel_dashboard_departmentteam, newpanel_projects_data
 from apps.panel.models import DashboardSettings
-from datetime import datetime
+from datetime import datetime, date
 from decimal import Decimal
 
 class PanelConsumer(AsyncWebsocketConsumer):
@@ -56,6 +56,7 @@ class PanelConsumer(AsyncWebsocketConsumer):
                 # Send data updates
                 await self.send_panel_data()
                 await self.send_dashboard_kpi_data()
+                await self.send_projects_data()
 
             except asyncio.CancelledError:
                 break
@@ -72,6 +73,8 @@ class PanelConsumer(AsyncWebsocketConsumer):
                 view = data.get('view')
                 if view == 'dashboard':
                     await self.send_dashboard_kpi_data()
+                elif view == 'projects':
+                    await self.send_projects_data()
                 else:
                     await self.send_panel_data()
             elif message_type == 'identify':
@@ -170,6 +173,21 @@ class PanelConsumer(AsyncWebsocketConsumer):
         response = {
             'type': 'dashboard_update',
             'kpis': kpis,
+            'timestamp': datetime.utcnow().isoformat() + 'Z'
+        }
+        await self.send(text_data=json.dumps(response, default=str))
+
+    async def send_projects_data(self):
+        projects_data = await sync_to_async(newpanel_projects_data)()
+
+        processed_data = []
+        for project in projects_data:
+            processed_project = {k: str(v) if isinstance(v, (Decimal, date)) else v for k, v in project.items()}
+            processed_data.append(processed_project)
+            
+        response = {
+            'type': 'projects_update',
+            'data': processed_data,
             'timestamp': datetime.utcnow().isoformat() + 'Z'
         }
         await self.send(text_data=json.dumps(response, default=str))
