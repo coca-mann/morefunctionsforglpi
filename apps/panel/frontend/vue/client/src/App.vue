@@ -14,7 +14,9 @@
 
       <!-- Views Container -->
       <div class="flex-1 overflow-y-auto pt-16">
-        <component :is="activeScreenComponent" />
+        <transition name="fade" mode="out-in">
+          <component :is="activeScreenComponent" />
+        </transition>
       </div>
     </div>
 
@@ -264,5 +266,16 @@ onUnmounted(() => {
 .notification-leave-to {
   opacity: 0;
   transform: translateX(30px);
+}
+
+/* Page transition animation */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

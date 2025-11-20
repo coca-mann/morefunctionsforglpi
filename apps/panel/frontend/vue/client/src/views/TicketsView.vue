@@ -1,35 +1,38 @@
 <template>
-  <div class="p-6 space-y-6">
-    <!-- Título -->
-    <div>
-      <h2 class="text-2xl font-bold text-slate-100 font-mono">Tickets de Manutenção</h2>
-      <p class="text-sm text-slate-400 mt-1">Total: {{ tickets.length }} tickets abertos</p>
-    </div>
+  <div class="p-4">
+    <!-- Header: Título e Contadores -->
+    <div class="flex justify-between items-center mb-4">
+      <!-- Título -->
+      <div>
+        <h2 class="text-2xl font-bold text-slate-100 font-mono">Tickets de Atendimento</h2>
+        <p class="text-sm text-slate-400 mt-1">Total: {{ tickets.length }} tickets abertos</p>
+      </div>
 
-    <!-- Contadores de Topo -->
-    <div class="grid grid-cols-4 gap-4">
-      <div class="bg-slate-800 border border-slate-700 rounded p-4">
-        <div class="text-sm text-slate-400 font-mono">CRÍTICO</div>
-        <div class="text-3xl font-bold font-mono mt-2" style="color: var(--urgency-5);">
-          {{ criticalCount }}
+      <!-- Contadores -->
+      <div class="grid grid-cols-4 gap-4">
+        <div class="bg-slate-800 border border-slate-700 rounded p-4">
+          <div class="text-sm text-slate-400 font-mono">CRÍTICO</div>
+          <div class="text-2xl font-bold font-mono mt-1" style="color: var(--urgency-5);">
+            {{ criticalCount }}
+          </div>
         </div>
-      </div>
-      <div class="bg-slate-800 border border-slate-700 rounded p-4">
-        <div class="text-sm text-slate-400 font-mono">ALTO</div>
-        <div class="text-3xl font-bold font-mono mt-2" style="color: var(--urgency-4);">
-          {{ highCount }}
+        <div class="bg-slate-800 border border-slate-700 rounded p-4">
+          <div class="text-sm text-slate-400 font-mono">ALTO</div>
+          <div class="text-2xl font-bold font-mono mt-1" style="color: var(--urgency-4);">
+            {{ highCount }}
+          </div>
         </div>
-      </div>
-      <div class="bg-slate-800 border border-slate-700 rounded p-4">
-        <div class="text-sm text-slate-400 font-mono">MÉDIO</div>
-        <div class="text-3xl font-bold font-mono mt-2" style="color: var(--urgency-3);">
-          {{ mediumCount }}
+        <div class="bg-slate-800 border border-slate-700 rounded p-4">
+          <div class="text-sm text-slate-400 font-mono">MÉDIO</div>
+          <div class="text-2xl font-bold font-mono mt-1" style="color: var(--urgency-3);">
+            {{ mediumCount }}
+          </div>
         </div>
-      </div>
-      <div class="bg-slate-800 border border-slate-700 rounded p-4">
-        <div class="text-sm text-slate-400 font-mono">BAIXO</div>
-        <div class="text-3xl font-bold font-mono mt-2" style="color: var(--urgency-1);">
-          {{ lowCount }}
+        <div class="bg-slate-800 border border-slate-700 rounded p-4">
+          <div class="text-sm text-slate-400 font-mono">BAIXO</div>
+          <div class="text-2xl font-bold font-mono mt-1" style="color: var(--urgency-1);">
+            {{ lowCount }}
+          </div>
         </div>
       </div>
     </div>
@@ -97,6 +100,8 @@ watch(lastMessage, (message) => {
 })
 
 const handleTicketsUpdate = (data: any[]) => {
+  // The backend (get_panel_data) already provides tickets in the desired order.
+  // The `map` function preserves this order.
   tickets.value = data.map((item: any) => {
     // Backend fields: id, Entidade, Titulo, Abertura, Status, Urgencia, idstatus
     return {

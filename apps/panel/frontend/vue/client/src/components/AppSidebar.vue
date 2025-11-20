@@ -1,10 +1,5 @@
 <template>
   <div class="w-20 bg-slate-900 border-r border-slate-700 flex flex-col items-center py-4 gap-2 fixed left-0 top-16 h-[calc(100vh-64px)]">
-    <!-- Logo/Home -->
-    <div class="w-14 h-14 bg-gradient-to-br from-blue-600 to-blue-800 rounded flex items-center justify-center mb-4 cursor-pointer hover:from-blue-500 hover:to-blue-700 transition-all" title="Home">
-      <span class="text-white text-2xl font-bold">TI</span>
-    </div>
-
     <!-- Menu Items -->
     <div class="flex-1 flex flex-col gap-2">
       <button
@@ -44,21 +39,6 @@
 
     <!-- Controles Inferiores -->
     <div class="flex flex-col gap-2">
-      <!-- Status de Conexão -->
-      <button
-        class="w-14 h-14 rounded flex items-center justify-center transition-all group"
-        :class="wsConnected ? 'bg-green-900 hover:bg-green-800' : 'bg-red-900 hover:bg-red-800'"
-        :title="wsConnected ? 'Conectado' : 'Desconectado'"
-      >
-        <span class="material-icons text-xl" :class="wsConnected ? 'text-green-400' : 'text-red-400'">
-          {{ wsConnected ? 'cloud_done' : 'cloud_off' }}
-        </span>
-
-        <!-- Tooltip -->
-        <div class="absolute left-full ml-2 px-3 py-2 bg-slate-800 text-slate-100 text-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-          {{ wsConnected ? 'Conectado' : 'Desconectado' }}
-        </div>
-      </button>
 
       <!-- Som -->
       <button
@@ -115,7 +95,6 @@ const emit = defineEmits<{
 
 const props = defineProps<{
   activeMenu?: string
-  wsConnected?: boolean
   soundEnabled?: boolean
 }>()
 
@@ -137,16 +116,10 @@ const menuItems: MenuItem[] = [
     id: 'projects',
     label: 'Projetos',
     icon: 'folder_open'
-  },
-  {
-    id: 'remote',
-    label: 'Administração',
-    icon: 'settings'
   }
 ]
 
 const activeMenuId = computed(() => props.activeMenu || 'dashboard')
-const wsConnected = computed(() => props.wsConnected ?? false)
 
 const selectMenu = (id: string) => {
   emit('select-menu', id)
