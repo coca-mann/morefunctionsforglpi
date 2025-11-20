@@ -26,7 +26,6 @@
       <!-- ID Único e IP -->
       <div class="pl-4 border-l border-slate-700 space-y-1">
         <div class="text-sm font-bold font-mono text-slate-100">{{ clientId }}</div>
-        <div class="text-xs font-mono text-slate-400">{{ clientIp }}</div>
       </div>
     </div>
 
@@ -40,7 +39,6 @@
       <div class="text-3xl font-bold font-mono text-green-400 tracking-wider">
         {{ currentTime }}
       </div>
-      <div class="text-xs text-slate-400 font-mono mt-1">{{ timezone }}</div>
     </div>
   </header>
 </template>
@@ -50,10 +48,8 @@ import { computed } from 'vue'
 
 interface Props {
   clientId: string
-  clientIp: string
   connectionStatus: 'connected' | 'connecting' | 'disconnected' | 'reconnecting' | 'error'
   currentTime: string
-  timezone: string
 }
 
 const props = defineProps<Props>()

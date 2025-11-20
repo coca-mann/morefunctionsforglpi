@@ -5,7 +5,7 @@
       <h2 class="text-2xl font-bold text-slate-100 font-mono">Tickets de Manutenção</h2>
       <p class="text-sm text-slate-400 mt-1">Total: {{ tickets.length }} tickets abertos</p>
     </div>
-    
+
     <!-- Contadores de Topo -->
     <div class="grid grid-cols-4 gap-4">
       <div class="bg-slate-800 border border-slate-700 rounded p-4">
@@ -33,48 +33,38 @@
         </div>
       </div>
     </div>
-    
+
     <!-- Tabela de Tickets -->
     <div class="bg-slate-800 border border-slate-700 rounded overflow-hidden">
       <table class="w-full text-sm font-mono">
         <thead class="bg-slate-900 border-b border-slate-700">
           <tr>
-            <th class="px-4 py-3 text-left text-slate-300">ID</th>
-            <th class="px-4 py-3 text-left text-slate-300">Descrição</th>
-            <th class="px-4 py-3 text-left text-slate-300">Atribuído a</th>
-            <th class="px-4 py-3 text-left text-slate-300">Prioridade</th>
-            <th class="px-4 py-3 text-left text-slate-300">Status</th>
-            <th class="px-4 py-3 text-left text-slate-300">Tempo Decorrido</th>
+            <th class="px-4 py-3 text-center text-slate-300">Status</th>
+            <th class="px-4 py-3 text-center text-slate-300">Abertura</th>
+            <th class="px-4 py-3 text-center text-slate-300">Entidade</th>
+            <th class="px-4 py-3 text-left text-slate-300">Título</th>
+            <th class="px-4 py-3 text-center text-slate-300">Urgência</th>
           </tr>
         </thead>
         <tbody>
-          <tr 
-            v-for="ticket in tickets" 
-            :key="ticket.id"
-            class="border-b border-slate-700 hover:bg-slate-700 transition-colors"
-          >
-            <td class="px-4 py-3 text-slate-300 font-bold">#{{ ticket.id }}</td>
-            <td class="px-4 py-3 text-slate-200">{{ ticket.description }}</td>
-            <td class="px-4 py-3 text-slate-300">{{ ticket.assignedTo }}</td>
-            <td class="px-4 py-3">
-              <span 
-                class="px-2 py-1 rounded text-xs font-bold border"
-                :style="getPriorityStyle(ticket.priority)"
-              >
-                {{ priorityLabels[ticket.priority] }}
+          <tr v-for="ticket in tickets" :key="ticket.id"
+            class="border-b border-slate-700 hover:bg-slate-700 transition-colors">
+            <td class="px-4 py-3 text-center">
+              <span class="px-3 py-1 rounded font-bold text-xs whitespace-nowrap" :style="getStatusStyle(ticket.idstatus)">
+                {{ ticket.status }}
               </span>
             </td>
-            <td class="px-4 py-3">
-              <span 
-                :class="[
-                  'px-2 py-1 rounded text-xs font-bold',
-                  ticket.status === 'open' ? 'bg-blue-900 text-blue-300' : 'bg-green-900 text-green-300'
-                ]"
-              >
-                {{ ticket.status === 'open' ? 'ABERTO' : 'FECHADO' }}
+            <td class="px-4 py-3 text-slate-300 text-center text-xs">
+              <div>{{ ticket.abertura ? ticket.abertura.split(' ')[0] : '-' }}</div>
+              <div>{{ ticket.abertura ? ticket.abertura.split(' ')[1] : '-' }}</div>
+            </td>
+            <td class="px-4 py-3 text-slate-300 text-center">{{ ticket.entidade }}</td>
+            <td class="px-4 py-3 text-slate-200">{{ ticket.titulo }}</td>
+            <td class="px-4 py-3 text-center">
+              <span class="px-3 py-1 rounded font-bold text-xs whitespace-nowrap" :style="getUrgencyStyle(ticket.urgencia)">
+                {{ ticket.urgencia }}
               </span>
             </td>
-            <td class="px-4 py-3 text-slate-300">{{ formatElapsedTime(ticket.createdAt) }}</td>
           </tr>
         </tbody>
       </table>
@@ -87,12 +77,13 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useWebSocket } from '../composables/useWebSocket'
 
 interface Ticket {
-  id: string
-  description: string
-  assignedTo: string
-  priority: 'critical' | 'high' | 'medium' | 'low'
-  status: 'open' | 'closed'
-  createdAt: string
+  id: string;
+  titulo: string;
+  entidade: string;
+  abertura: string;
+  status: string;
+  urgencia: string;
+  idstatus: number;
 }
 
 const tickets = ref<Ticket[]>([])
@@ -107,35 +98,15 @@ watch(lastMessage, (message) => {
 
 const handleTicketsUpdate = (data: any[]) => {
   tickets.value = data.map((item: any) => {
-    // Map backend fields to frontend interface
-    // Backend: id, Entidade, Titulo, Abertura, Status, Urgencia, Solicitante, Tecnico, idstatus
-    
-    let priority: Ticket['priority'] = 'low'
-    if (item.Urgencia === 'Muito Alta') priority = 'critical'
-    else if (item.Urgencia === 'Alta') priority = 'high'
-    else if (item.Urgencia === 'Média') priority = 'medium'
-    
-    // Map Status. 5 is Solucionado (Closed), others Open
-    // idstatus: 1=Novo, 2=Em atendimento, 3=Planejado, 4=Pendente, 5=Solucionado, 6=Fechado
-    const status: Ticket['status'] = (item.idstatus === 5 || item.idstatus === 6) ? 'closed' : 'open'
-
-    // Parse date 'dd/mm/yy HH:MM' to ISO for sorting/display
-    // Note: Assuming current year/century if needed, but string format might be enough for display if not calculating time.
-    // But formatElapsedTime needs a Date object.
-    // Let's try to parse it manually.
-    const [datePart, timePart] = item.Abertura.split(' ')
-    const [day, month, year] = datePart.split('/')
-    const [hour, minute] = timePart.split(':')
-    // Assuming 20xx for year
-    const isoDate = `20${year}-${month}-${day}T${hour}:${minute}:00`
-
+    // Backend fields: id, Entidade, Titulo, Abertura, Status, Urgencia, idstatus
     return {
       id: String(item.id),
-      description: item.Titulo,
-      assignedTo: item.Tecnico || 'Não atribuído',
-      priority: priority,
-      status: status,
-      createdAt: isoDate
+      titulo: item.Titulo,
+      entidade: item.Entidade,
+      abertura: item.Abertura,
+      status: item.Status,
+      urgencia: item.Urgencia,
+      idstatus: item.idstatus
     }
   })
 }
@@ -145,59 +116,83 @@ onMounted(() => {
   requestDataRefresh('tickets')
 })
 
-const priorityLabels: Record<string, string> = {
-  critical: 'CRÍTICO',
-  high: 'ALTO',
-  medium: 'MÉDIO',
-  low: 'BAIXO'
-}
-
-const getPriorityStyle = (priority: string) => {
-  const styles: Record<string, Record<string, string>> = {
-    critical: {
-      borderColor: 'var(--urgency-5)',
-      backgroundColor: 'rgba(105, 58, 182, 0.1)',
-      color: 'var(--urgency-5)'
+const getStatusStyle = (statusId: number) => {
+  const styles: Record<number, Record<string, string>> = {
+    1: { // Novo
+      backgroundColor: 'var(--status-1)',
+      color: 'var(--status-1-text)',
+      border: 'none',
     },
-    high: {
-      borderColor: 'var(--urgency-4)',
-      backgroundColor: 'rgba(234, 76, 60, 0.1)',
-      color: 'var(--urgency-4)'
+    2: { // Em atendimento
+      backgroundColor: 'transparent',
+      color: 'var(--status-2-border)',
+      border: '1px solid var(--status-2-border)',
     },
-    medium: {
-      borderColor: 'var(--urgency-3)',
-      backgroundColor: 'rgba(247, 155, 30, 0.1)',
-      color: 'var(--urgency-3)'
+    3: { // Em atendimento (planejado)
+      backgroundColor: 'transparent',
+      color: 'var(--status-3-border)',
+      border: '1px solid var(--status-3-border)',
     },
-    low: {
-      borderColor: 'var(--urgency-1)',
-      backgroundColor: 'rgba(87, 174, 82, 0.1)',
-      color: 'var(--urgency-1)'
+    4: { // Pendente
+      backgroundColor: 'var(--status-4)',
+      color: 'var(--status-4-text)',
+      border: 'none',
+    },
+    5: { // Solucionado
+      backgroundColor: 'var(--status-5)',
+      color: 'var(--status-5-text)',
+      border: 'none',
+    },
+    6: { // Fechado
+      backgroundColor: 'var(--status-5)',
+      color: 'var(--status-5-text)',
+      border: 'none',
+    },
+    10: { // Aprovação
+      backgroundColor: 'var(--status-10)',
+      color: 'var(--status-10-text)',
+      border: 'none',
     }
-  }
-  return styles[priority] || styles.low
+  };
+  return styles[statusId] || { backgroundColor: '#slate-600', color: 'white' };
 }
 
-const criticalCount = computed(() => tickets.value.filter(t => t.priority === 'critical').length)
-const highCount = computed(() => tickets.value.filter(t => t.priority === 'high').length)
-const mediumCount = computed(() => tickets.value.filter(t => t.priority === 'medium').length)
-const lowCount = computed(() => tickets.value.filter(t => t.priority === 'low').length)
-
-const formatElapsedTime = (dateString: string) => {
-  const createdDate = new Date(dateString)
-  const now = new Date()
-  const diffMs = now.getTime() - createdDate.getTime()
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-  const diffDays = Math.floor(diffHours / 24)
-  
-  if (isNaN(diffHours)) return '-'
-
-  if (diffDays > 0) {
-    return `${diffDays}d ${diffHours % 24}h`
-  } else {
-    return `${diffHours}h`
-  }
+const getUrgencyStyle = (urgencyText: string) => {
+  const styles: Record<string, Record<string, string>> = {
+    'Muito Alta': {
+      backgroundColor: 'transparent',
+      color: 'var(--urgency-5)',
+      border: '1px solid var(--urgency-5)',
+    },
+    'Alta': {
+      backgroundColor: 'transparent',
+      color: 'var(--urgency-4)',
+      border: '1px solid var(--urgency-4)',
+    },
+    'Média': {
+      backgroundColor: 'transparent',
+      color: 'var(--urgency-3)',
+      border: '1px solid var(--urgency-3)',
+    },
+    'Baixa': {
+      backgroundColor: 'transparent',
+      color: 'var(--urgency-2)',
+      border: '1px solid var(--urgency-2)',
+    },
+    'Muito baixa': {
+      backgroundColor: 'transparent',
+      color: 'var(--urgency-1)',
+      border: '1px solid var(--urgency-1)',
+    },
+  };
+  return styles[urgencyText] || { border: '1px solid gray', color: 'gray' };
 }
+
+const criticalCount = computed(() => tickets.value.filter(t => t.urgencia === 'Muito Alta').length)
+const highCount = computed(() => tickets.value.filter(t => t.urgencia === 'Alta').length)
+const mediumCount = computed(() => tickets.value.filter(t => t.urgencia === 'Média').length)
+const lowCount = computed(() => tickets.value.filter(t => t.urgencia === 'Baixa' || t.urgencia === 'Muito baixa').length)
+
 </script>
 
 <style scoped>
