@@ -48,8 +48,10 @@ const clientId = ref(generateClientId())
 export function useWebSocket(options: UseWebSocketOptions = {}) {
   // Use relative path to allow Vite Proxy to handle the connection
   // This works for both dev (via proxy) and prod (if served from same origin)
+  const wsBaseUrl = import.meta.env.VITE_WS_BASE_URL;
+
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  const defaultUrl = `ws://172.16.0.250:8000/ws/panel/`
+  const defaultUrl = `${wsBaseUrl}/ws/panel/`;
 
   const {
     url = defaultUrl,
