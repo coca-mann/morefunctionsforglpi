@@ -49,7 +49,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   // Use relative path to allow Vite Proxy to handle the connection
   // This works for both dev (via proxy) and prod (if served from same origin)
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  const defaultUrl = `ws://127.0.0.1:8000/ws/panel/`
+  const defaultUrl = `ws://172.16.0.250:8000/ws/panel/`
 
   const {
     url = defaultUrl,
