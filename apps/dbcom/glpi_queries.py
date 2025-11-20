@@ -350,3 +350,22 @@ def get_category_parent_id(category_id: int):
         print(f"[DEBUG] ERRO CRÍTICO AO EXECUTAR 'get_category_parent_id': {e}")
         return None  # Retorna None para parar o loop
 
+
+def newpanel_dashboard_ticketcounter():
+    if not db_glpi:
+        return []
+    
+    sql="""
+    SELECT
+    SUM(CASE WHEN DATE(date) = CURRENT_DATE() THEN 1 ELSE 0 END) AS total_hoje,
+    SUM(CASE WHEN DATE(date) = DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY) THEN 1 ELSE 0 END) AS total_ontem,
+    (SUM(CASE WHEN DATE(date) = CURRENT_DATE() THEN 1 ELSE 0 END) - 
+     SUM(CASE WHEN DATE(date) = DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY) THEN 1 ELSE 0 END)) AS diferenca
+    FROM 
+        glpi_tickets
+    WHERE 
+    is_deleted = 0
+    """
+        
+    return db_glpi.fetch_query(sql)
+

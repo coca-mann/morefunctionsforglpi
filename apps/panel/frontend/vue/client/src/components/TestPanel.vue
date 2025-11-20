@@ -10,29 +10,6 @@
 
     <!-- Simulador de Estados de Conexão -->
     <div class="space-y-4">
-      <div>
-        <h4 class="text-sm font-bold text-slate-300 mb-2 font-mono">Testar Estados de Conexão</h4>
-        <div class="space-y-2">
-          <button
-            @click="testConnectionState('disconnected')"
-            class="w-full px-3 py-2 bg-red-600 hover:bg-red-700 rounded text-sm font-bold text-white transition-colors"
-          >
-            Simular Desconectado
-          </button>
-          <button
-            @click="testConnectionState('connecting')"
-            class="w-full px-3 py-2 bg-yellow-600 hover:bg-yellow-700 rounded text-sm font-bold text-white transition-colors"
-          >
-            Simular Conectando
-          </button>
-          <button
-            @click="testConnectionState('connected')"
-            class="w-full px-3 py-2 bg-green-600 hover:bg-green-700 rounded text-sm font-bold text-white transition-colors"
-          >
-            Simular Conectado
-          </button>
-        </div>
-      </div>
 
       <!-- Simulador de Novo Ticket -->
       <div class="pt-4 border-t border-slate-700">
@@ -152,6 +129,10 @@
             </span>
           </div>
           <div>Som Ativado: <span :class="soundEnabled ? 'text-yellow-400' : 'text-slate-500'">{{ soundEnabled ? 'Sim' : 'Não' }}</span></div>
+          <div>Intervalo de Atualização: <span class="text-slate-200">{{ settings.fetch_interval_seconds }}s</span></div>
+          <button @click="forceRefreshData" class="w-full px-3 py-2 mt-2 bg-blue-600 hover:bg-blue-700 rounded text-sm font-bold text-white transition-colors">
+            Forçar Atualização de Dados
+          </button>
         </div>
       </div>
     </div>
@@ -159,7 +140,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { useWebSocket } from '../composables/useWebSocket'
 
 const emit = defineEmits<{
   'close': []
@@ -167,7 +149,6 @@ const emit = defineEmits<{
   'send-project-update': [data: any]
   'send-remote-command': [target: string]
   'play-sound': [url: string]
-  'test-connection-state': [state: 'connected' | 'connecting' | 'disconnected']
 }>()
 
 const props = defineProps<{
@@ -178,13 +159,23 @@ const props = defineProps<{
   soundEnabled: boolean
 }>()
 
+// Access settings from useWebSocket
+const { settings, requestDataRefresh } = useWebSocket()
+
 // Estados locais
 const newTicketTitle = ref('')
 const newTicketPriority = ref('high')
 const projectUpdateTitle = ref('')
 const projectProgress = ref(50)
-const soundUrl = ref('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3')
+const soundUrl = ref(settings.value.notification_sound_url || 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3')
 const remoteTarget = ref('dashboard')
+
+// Watch for changes in settings.notification_sound_url
+watch(() => settings.value.notification_sound_url, (newUrl) => {
+  if (newUrl) {
+    soundUrl.value = newUrl
+  }
+}, { immediate: true })
 
 // Computed
 const connectionStatusLabel = computed(() => {
@@ -199,10 +190,6 @@ const connectionStatusLabel = computed(() => {
       return 'Desconhecido'
   }
 })
-
-const testConnectionState = (state: 'connected' | 'connecting' | 'disconnected') => {
-  emit('test-connection-state', state)
-}
 
 const sendNewTicket = () => {
   if (!newTicketTitle.value) {
@@ -256,6 +243,11 @@ const playTestSound = () => {
 
 const sendRemoteCommand = () => {
   emit('send-remote-command', remoteTarget.value)
+}
+
+const forceRefreshData = () => {
+  requestDataRefresh('dashboard')
+  requestDataRefresh('tickets')
 }
 </script>
 

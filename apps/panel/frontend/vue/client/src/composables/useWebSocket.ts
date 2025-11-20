@@ -21,6 +21,10 @@ const lastMessage = ref<WebSocketMessage | null>(null)
 const error = ref<string | null>(null)
 const reconnectAttempts = ref(0)
 const clientIp = ref('Detectando...')
+const settings = ref({
+  fetch_interval_seconds: 30,
+  notification_sound_url: ''
+})
 let reconnectTimeout: ReturnType<typeof setTimeout> | null = null
 
 // Gera ID único do cliente (persistente)
@@ -100,6 +104,11 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
           if (message.type === 'client_ip_response' && (message as any).client_ip) {
             clientIp.value = (message as any).client_ip
             console.log('[WebSocket] IP atualizado:', clientIp.value)
+          }
+
+          if (message.type === 'settings_update' && (message as any).settings) {
+            settings.value = (message as any).settings
+            console.log('[WebSocket] Settings updated:', settings.value)
           }
         } catch (e) {
           console.error('[WebSocket] Erro ao parsear mensagem:', e)
@@ -264,6 +273,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     error,
     clientId,
     clientIp,
+    settings,
     reconnectAttempts,
 
     // Métodos

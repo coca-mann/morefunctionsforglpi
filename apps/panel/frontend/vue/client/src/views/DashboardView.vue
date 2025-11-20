@@ -9,9 +9,14 @@
     <!-- KPIs Principais -->
     <div class="grid grid-cols-4 gap-4">
       <div class="bg-slate-800 border border-slate-700 rounded p-4">
-        <div class="text-sm text-slate-400 font-mono">Tickets Abertos</div>
+        <div class="text-sm text-slate-400 font-mono">Tickets Abertos Hoje</div>
         <div class="text-3xl font-bold font-mono mt-2" style="color: var(--status-3-border);">{{ openTickets }}</div>
-        <div class="text-xs text-slate-500 mt-2">↑ 2 desde ontem</div>
+        <div class="text-xs mt-2" :class="getDifferenceClass(differenceSinceYesterday)">
+          <span v-if="differenceSinceYesterday > 0">↑</span>
+          <span v-else-if="differenceSinceYesterday < 0">↓</span>
+          <span v-else>~</span>
+          {{ Math.abs(differenceSinceYesterday) }} desde ontem
+        </div>
       </div>
 
       <div class="bg-slate-800 border border-slate-700 rounded p-4">
@@ -130,6 +135,7 @@ interface Activity {
 const { lastMessage, requestDataRefresh } = useWebSocket()
 
 const openTickets = ref(0)
+const differenceSinceYesterday = ref(0)
 const avgResponseTime = ref('2h 30m')
 const resolvedToday = ref(0)
 const customerSatisfaction = ref(88)
@@ -137,16 +143,28 @@ const surveyCount = ref(47)
 
 // Watch for WebSocket messages
 watch(lastMessage, (message) => {
+  // Handle new dashboard-specific KPI updates
+  if (message && message.type === 'dashboard_update' && message.kpis) {
+    openTickets.value = message.kpis.total_hoje ?? 0
+    differenceSinceYesterday.value = message.kpis.diferenca ?? 0
+  }
+
+  // Handle updates from the general ticket poll
   if (message && message.type === 'tickets_update' && message.counters) {
-    openTickets.value = message.counters.total
+    // This could be deprecated if dashboard_update provides all KPIs
     resolvedToday.value = message.counters.resolved_today
-    // openToday.value = message.counters.open_today // Available if needed
   }
 })
 
 onMounted(() => {
   requestDataRefresh('dashboard')
 })
+
+const getDifferenceClass = (diff: number) => {
+  if (diff > 0) return 'text-red-500' // More tickets is bad
+  if (diff < 0) return 'text-green-500' // Fewer tickets is good
+  return 'text-slate-500' // No change
+}
 
 const technicians: Technician[] = [
   { id: '1', name: 'João Silva', specialization: 'Hardware', available: true, ticketsAssigned: 3 },

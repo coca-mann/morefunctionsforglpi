@@ -38,15 +38,15 @@
 
     <!-- Test Panel -->
     <TestPanel v-if="showTestPanel" :visible="showTestPanel" :clientId="clientId" :clientIp="clientIp"
-      :connectionStatus="testConnectionStatus || connectionStatus" :soundEnabled="soundEnabled"
+      :connectionStatus="connectionStatus" :soundEnabled="soundEnabled"
       @close="showTestPanel = false" @send-new-ticket="handleTestNewTicket"
       @send-project-update="handleTestProjectUpdate" @send-remote-command="handleTestRemoteCommand"
-      @play-sound="handleTestPlaySound" @test-connection-state="handleTestConnectionState" />
+      @play-sound="handleTestPlaySound" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import AppHeader from './components/AppHeader.vue'
 import AppSidebar from './components/AppSidebar.vue'
 import TestPanel from './components/TestPanel.vue'
@@ -63,6 +63,7 @@ const {
   isConnected: wsConnected,
   connectionStatus,
   clientId: wsClientId,
+  settings,
   // clientIp, // Don't destructure directly to allow local override
   lastMessage,
   send: sendWebSocketMessage
@@ -76,6 +77,14 @@ const {
   setSoundUrl
 } = useNotifications()
 
+// Watch for settings changes and update the sound URL
+watch(() => settings.value.notification_sound_url, (newUrl) => {
+  if (newUrl) {
+    setSoundUrl(newUrl)
+    console.log(`[App] Notification sound URL set to: ${newUrl}`)
+  }
+}, { immediate: true })
+
 // Estado da aplicação
 const activeScreen = ref<'dashboard' | 'tickets' | 'projects' | 'remote'>('tickets')
 const soundEnabled = ref(true)
@@ -84,9 +93,7 @@ const notifications = ref<Array<{ id: string; title: string; description: string
 const currentTime = ref<string>('00:00:00')
 const timezone = ref<string>('America/Porto_Velho')
 const clientIp = ref<string>('Detectando...')
-const testConnectionStatus = ref<'connected' | 'connecting' | 'disconnected' | null>(null)
 let timeInterval: ReturnType<typeof setInterval> | null = null
-let testConnectionTimeout: ReturnType<typeof setTimeout> | null = null
 
 // Gera ID do dispositivo com prefixo DISPLAY
 const generateDisplayId = (): string => {
@@ -172,20 +179,6 @@ const handleTestPlaySound = async (url: string) => {
   await playNotificationSound(true)
 }
 
-const handleTestConnectionState = (state: 'connected' | 'connecting' | 'disconnected') => {
-  testConnectionStatus.value = state
-
-  if (testConnectionTimeout) {
-    clearTimeout(testConnectionTimeout)
-  }
-
-  testConnectionTimeout = setTimeout(() => {
-    testConnectionStatus.value = null
-  }, 10000)
-
-  console.log(`[Test] Estado de conexão simulado: ${state}`)
-}
-
 // Toggle de som
 const toggleSound = () => {
   soundEnabled.value = !soundEnabled.value
@@ -237,19 +230,15 @@ onMounted(() => {
   connect()
 })
 
-onUnmounted(() => {
-  if (timeInterval) {
-    clearInterval(timeInterval)
-  }
-  if (testConnectionTimeout) {
-    clearTimeout(testConnectionTimeout)
-  }
+  onUnmounted(() => {
+    if (timeInterval) {
+      clearInterval(timeInterval)
+    }
 
-  // Fechar conexão ao sair da aplicação
-  const { disconnect } = useWebSocket()
-  disconnect()
-})
-</script>
+    // Fechar conexão ao sair da aplicação
+    const { disconnect } = useWebSocket()
+    disconnect()
+  })</script>
 
 <style>
 /* Animações de notificação */
