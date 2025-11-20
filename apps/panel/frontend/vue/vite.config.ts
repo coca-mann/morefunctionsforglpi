@@ -8,6 +8,7 @@ import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
 const plugins = [vue(), tailwindcss(), vitePluginManusRuntime()];
 
 export default defineConfig({
+  base: '/painel/', // Define a base URL para o deploy em um sub-caminho
   plugins,
   resolve: {
     alias: {
