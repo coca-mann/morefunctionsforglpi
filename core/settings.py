@@ -207,9 +207,18 @@ SIMPLE_JWT = {
 }
 
 
+# Configuração de CORS para permitir que o frontend acesse a API.
+# É uma lista de "origens" (protocolo + domínio + porta) que têm permissão.
 CORS_ALLOWED_ORIGINS = [
-    "http://painel.172.16.0.250",
+    # Ambiente de desenvolvimento (Vite dev server)
     "http://localhost:3000",
+    "http://127.0.0.1:3000",
+
+    # Ambiente de produção (onde o Nginx está servindo o frontend)
+    "http://172.16.0.250",
+    "http://172.16.0.250/painel/",
 ]
 
+# IMPORTANTE: Em produção, esta opção deve ser False por segurança.
+# Ela força o Django a usar a lista 'CORS_ALLOWED_ORIGINS'.
 CORS_ALLOW_ALL_ORIGINS = False
