@@ -46,12 +46,18 @@ const generateClientId = (): string => {
 const clientId = ref(generateClientId())
 
 export function useWebSocket(options: UseWebSocketOptions = {}) {
-  // Use relative path to allow Vite Proxy to handle the connection
-  // This works for both dev (via proxy) and prod (if served from same origin)
   const wsBaseUrl = import.meta.env.VITE_WS_BASE_URL;
 
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  const defaultUrl = `${wsBaseUrl}/ws/panel/`;
+  let defaultUrl;
+  if (wsBaseUrl) {
+    // Usa a URL do .env se ela existir.
+    defaultUrl = `${wsBaseUrl}/ws/panel/`;
+  } else {
+    // Fallback para o comportamento antigo: constrói a URL a partir do host da página.
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    defaultUrl = `${protocol}//${window.location.host}/ws/panel/`;
+    console.warn('[WebSocket] VITE_WS_BASE_URL não está definida. Usando URL relativa:', defaultUrl);
+  }
 
   const {
     url = defaultUrl,
