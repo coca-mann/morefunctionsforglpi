@@ -1,0 +1,36 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Novo Painel de TI</title>
+    
+    <!-- 
+      ATENÇÃO: As linhas abaixo são placeholders.
+      Após rodar 'npm run build' na pasta 'apps/panel/frontend/vue/',
+      o Vite irá gerar um arquivo 'index.html' na pasta 'dist/public/'.
+      
+      1. COPIE a tag <link> e a tag <script> desse arquivo gerado.
+      2. COMENTE ou APAGUE as linhas de exemplo abaixo.
+      3. COLE as tags que você copiou aqui.
+      4. AJUSTE os caminhos (href e src) para usar o template tag 'static' do Django.
+      
+      Exemplo:
+      Se o Vite gerou: <script src="/assets/index-a1b2c3d4.js">
+      Você deve alterar para: <script src="{% static 'panel/vue_dist/assets/index-a1b2c3d4.js' %}">
+
+      Isso assume que você moveu o conteúdo de 'dist/public' para 'apps/panel/static/panel/vue_dist'
+      e rodou 'python manage.py collectstatic'.
+    -->
+
+    <!-- Exemplo de como as tags devem ficar (APAGUE OU COMENTE DEPOIS) -->
+    <link rel="stylesheet" href="{% static 'panel/vue_dist/assets/index.css' %}">
+</head>
+<body class="bg-slate-900">
+    <div id="app"></div>
+
+    <!-- Exemplo de como as tags devem ficar (APAGUE OU COMENTE DEPOIS) -->
+    <script type="module" src="{% static 'panel/vue_dist/assets/index.js' %}"></script>
+</body>
+</html>

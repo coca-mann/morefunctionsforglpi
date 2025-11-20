@@ -15,6 +15,15 @@ def dashboard_page(request):
     return render(request, 'panel/dashboard.html')
 
 
+def new_dashboard_page(request):
+    """
+    Renderiza a página HTML que irá carregar o novo painel em Vue.js.
+    """
+    return render(request, 'panel/new_dashboard.html')
+
+
+
+
 def api_get_panel_data(request):
     """
     Uma view de API que retorna os dados do painel E OS CONTADORES em JSON.
