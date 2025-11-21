@@ -12,6 +12,7 @@ interface UseWebSocketOptions {
   autoReconnect?: boolean
   reconnectDelay?: number
   maxReconnectAttempts?: number
+  availableScreens?: string[]
 }
 
 // Estado compartilhado (Singleton)
@@ -29,12 +30,12 @@ let reconnectTimeout: ReturnType<typeof setTimeout> | null = null
 
 // Gera ID único do cliente (persistente)
 const generateClientId = (): string => {
-  const storageKey = 'glpi_panel_client_id'
+  const storageKey = 'glpi_panel_display_id'
   let id = localStorage.getItem(storageKey)
 
   if (!id) {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-    id = 'Kiosk-'
+    id = 'DISPLAY-'
     for (let i = 0; i < 5; i++) {
       id += chars.charAt(Math.floor(Math.random() * chars.length))
     }
@@ -63,7 +64,8 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     url = defaultUrl,
     autoReconnect = true,
     reconnectDelay = 5000,
-    maxReconnectAttempts = 10
+    maxReconnectAttempts = 10,
+    availableScreens = []
   } = options
 
   /**
@@ -89,6 +91,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         const identification: ClientIdentification = {
           type: 'identify',
           clientId: clientId.value,
+          availableScreens: availableScreens,
           timestamp: new Date().toISOString()
         }
         send(identification)

@@ -8,8 +8,8 @@
     <!-- Main Content -->
     <div class="flex-1 flex flex-col ml-20">
       <!-- Header -->
-      <AppHeader :clientId="clientId" :clientIp="clientIp"
-        :connectionStatus="(testConnectionStatus || connectionStatus) as any" :currentTime="currentTime"
+      <AppHeader :clientId="wsClientId" :clientIp="clientIp"
+        :connectionStatus="connectionStatus" :currentTime="currentTime"
         :timezone="timezone" />
 
       <!-- Views Container -->
@@ -37,11 +37,10 @@
     </div>
 
     <!-- Test Panel -->
-    <TestPanel v-if="showTestPanel" :visible="showTestPanel" :clientId="clientId" :clientIp="clientIp"
-      :connectionStatus="connectionStatus" :soundEnabled="soundEnabled"
-      @close="showTestPanel = false" @send-new-ticket="handleTestNewTicket"
-      @send-project-update="handleTestProjectUpdate" @send-remote-command="handleTestRemoteCommand"
-      @play-sound="handleTestPlaySound" />
+    <TestPanel v-if="showTestPanel" :visible="showTestPanel" :clientId="wsClientId" :clientIp="clientIp"
+      :connectionStatus="connectionStatus" :soundEnabled="soundEnabled" @close="showTestPanel = false"
+      @send-new-ticket="handleTestNewTicket" @send-project-update="handleTestProjectUpdate"
+      @send-remote-command="handleTestRemoteCommand" @play-sound="handleTestPlaySound" />
   </div>
 </template>
 
@@ -67,7 +66,9 @@ const {
   // clientIp, // Don't destructure directly to allow local override
   lastMessage,
   send: sendWebSocketMessage
-} = useWebSocket()
+} = useWebSocket({
+  availableScreens: ['dashboard', 'tickets', 'projects', 'remote']
+})
 
 // Notificações
 const {
@@ -85,6 +86,17 @@ watch(() => settings.value.notification_sound_url, (newUrl) => {
   }
 }, { immediate: true })
 
+// Watch for screen change requests
+watch(() => lastMessage.value, (msg) => {
+  if (msg && msg.type === 'change_screen' && msg.screen) {
+    console.log(`[App] Changing screen to: ${msg.screen}`)
+    // Verify if screen exists
+    if (['dashboard', 'tickets', 'projects', 'remote'].includes(msg.screen)) {
+      activeScreen.value = msg.screen as any
+    }
+  }
+})
+
 // Estado da aplicação
 const activeScreen = ref<'dashboard' | 'tickets' | 'projects' | 'remote'>('tickets')
 const soundEnabled = ref(true)
@@ -95,17 +107,7 @@ const timezone = ref<string>('America/Porto_Velho')
 const clientIp = ref<string>('Detectando...')
 let timeInterval: ReturnType<typeof setInterval> | null = null
 
-// Gera ID do dispositivo com prefixo DISPLAY
-const generateDisplayId = (): string => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-  let id = 'DISPLAY-'
-  for (let i = 0; i < 5; i++) {
-    id += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  return id
-}
-
-const clientId = ref(generateDisplayId())
+// Removed local generateDisplayId as we use wsClientId from useWebSocket
 
 // Componentes de tela
 const viewComponents = {
@@ -230,15 +232,15 @@ onMounted(() => {
   connect()
 })
 
-  onUnmounted(() => {
-    if (timeInterval) {
-      clearInterval(timeInterval)
-    }
+onUnmounted(() => {
+  if (timeInterval) {
+    clearInterval(timeInterval)
+  }
 
-    // Fechar conexão ao sair da aplicação
-    const { disconnect } = useWebSocket()
-    disconnect()
-  })</script>
+  // Fechar conexão ao sair da aplicação
+  const { disconnect } = useWebSocket()
+  disconnect()
+})</script>
 
 <style>
 /* Animações de notificação */

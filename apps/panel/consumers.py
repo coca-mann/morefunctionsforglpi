@@ -5,7 +5,7 @@ from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 from asgiref.sync import sync_to_async
 from apps.dbcom.glpi_queries import get_panel_data, newpanel_dashboard_ticketcounter, newpanel_dashboard_responsetimeavg, tickets_resolved_today, newpanel_dashboard_clientsatisfactionpercent, newpanel_dashboard_departmentteam, newpanel_projects_data
-from apps.panel.models import DashboardSettings
+from apps.panel.models import DashboardSettings, Display
 from datetime import datetime, date
 from decimal import Decimal
 
@@ -33,6 +33,12 @@ class PanelConsumer(AsyncWebsocketConsumer):
                 await self.polling_task
             except asyncio.CancelledError:
                 pass
+
+        # Remove display from DB
+        try:
+            await sync_to_async(Display.objects.filter(channel_name=self.channel_name).delete)()
+        except Exception as e:
+            print(f"Error removing display: {e}")
 
     async def poll_data(self):
         # Fetch settings once per loop to get the interval
@@ -80,7 +86,11 @@ class PanelConsumer(AsyncWebsocketConsumer):
             elif message_type == 'identify':
                 # Log client identification if needed
                 client_id = data.get('clientId')
-                # print(f"Client identified: {client_id}")
+                available_screens = data.get('availableScreens', [])
+                
+                # Register or update display
+                await sync_to_async(self.register_display)(client_id, available_screens)
+                print(f"Client identified and registered: {client_id}")
             elif message_type == 'request_ip':
                 # Get client IP from scope or headers (for proxies)
                 client_ip = self.scope.get('client', ['unknown'])[0]
@@ -203,3 +213,26 @@ class PanelConsumer(AsyncWebsocketConsumer):
         }
 
         await self.send(text_data=json.dumps(response, default=str))
+        await self.send(text_data=json.dumps(response, default=str))
+
+    def register_display(self, client_id, available_screens):
+        Display.objects.update_or_create(
+            name=client_id,
+            defaults={
+                'channel_name': self.channel_name,
+                'available_screens': available_screens,
+            }
+        )
+
+    async def display_control(self, event):
+        """
+        Handle display control messages sent from the model signal.
+        """
+        command = event.get('command')
+        screen = event.get('screen')
+
+        if command == 'change_screen':
+            await self.send(text_data=json.dumps({
+                'type': 'change_screen',
+                'screen': screen
+            }))

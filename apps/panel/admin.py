@@ -1,32 +1,30 @@
 from django.contrib import admin
-from django.http import HttpResponseRedirect
-from django.urls import path
-from .models import DashboardSettings
+from django.shortcuts import redirect
+from .models import DashboardSettings, Display
 
 @admin.register(DashboardSettings)
 class DashboardSettingsAdmin(admin.ModelAdmin):
-    
-    def get_urls(self):
-        """
-        Redireciona a página principal do admin (a lista)
-        diretamente para a página de edição da única configuração (ID=1).
-        """
-        urls = super().get_urls()
-        custom_urls = [
-            path('', self.admin_site.admin_view(self.changelist_redirect_to_change), name='settings_dashboardsettings_changelist')
-        ]
-        return custom_urls + urls
-
-    def changelist_redirect_to_change(self, request):
-        # Carrega (ou cria) as configurações de ID=1
-        settings = DashboardSettings.objects.get_settings()
-        # Redireciona para a página de 'change'
-        return HttpResponseRedirect(f"../dashboardsettings/{settings.id}/change/")
-
     def has_add_permission(self, request):
-        # Impede o usuário de clicar em "Adicionar Novo"
-        return False
-        
-    def has_delete_permission(self, request, obj=None):
-        # Impede o usuário de deletar
-        return False
+        return False if self.model.objects.exists() else True
+
+    def changelist_view(self, request, extra_context=None):
+        obj = self.model.objects.first()
+        if obj:
+            return redirect('admin:panel_dashboardsettings_change', obj.pk)
+        return redirect('admin:panel_dashboardsettings_add')
+
+@admin.register(Display)
+class DisplayAdmin(admin.ModelAdmin):
+    list_display = ('name', 'current_screen', 'connected_at', 'last_seen')
+    list_filter = ('current_screen', 'connected_at')
+    search_fields = ('name',)
+    readonly_fields = ('name', 'channel_name', 'available_screens', 'connected_at', 'last_seen')
+    
+    list_editable = ('current_screen',)
+
+    def get_readonly_fields(self, request, obj=None):
+        # Make everything readonly except current_screen, technically we only want the system to manage these
+        # but the admin might want to force a screen change.
+        if obj:
+            return self.readonly_fields
+        return self.readonly_fields

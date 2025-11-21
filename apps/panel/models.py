@@ -48,3 +48,47 @@ class DashboardSettings(models.Model):
     class Meta:
         verbose_name = "Configurações do Dashboard"
         verbose_name_plural = "Configurações do Dashboard"
+
+class Display(models.Model):
+    SCREEN_CHOICES = [
+        ('dashboard', 'Dashboard'),
+        ('tickets', 'Tickets'),
+        ('projects', 'Projetos'),
+        ('remote', 'Controle Remoto'),
+    ]
+
+    name = models.CharField(max_length=100, unique=True, verbose_name="Nome do Display (Client ID)")
+    channel_name = models.CharField(max_length=255, verbose_name="Canal WebSocket")
+    current_screen = models.CharField(max_length=50, choices=SCREEN_CHOICES, default='tickets', verbose_name="Tela Atual")
+    available_screens = models.JSONField(default=list, verbose_name="Telas Disponíveis")
+    connected_at = models.DateTimeField(auto_now_add=True, verbose_name="Conectado em")
+    last_seen = models.DateTimeField(auto_now=True, verbose_name="Visto por último em")
+
+    def __str__(self):
+        return f"{self.name}"
+
+    def save(self, *args, **kwargs):
+        # Check if current_screen changed
+        if self.pk:
+            try:
+                old_instance = Display.objects.get(pk=self.pk)
+                if old_instance.current_screen != self.current_screen:
+                    # Send update to client
+                    from asgiref.sync import async_to_sync
+                    from channels.layers import get_channel_layer
+                    channel_layer = get_channel_layer()
+                    async_to_sync(channel_layer.send)(
+                        self.channel_name,
+                        {
+                            "type": "display.control",
+                            "command": "change_screen",
+                            "screen": self.current_screen,
+                        }
+                    )
+            except Display.DoesNotExist:
+                pass
+        super().save(*args, **kwargs)
+
+    class Meta:
+        verbose_name = "Display Conectado"
+        verbose_name_plural = "Displays Conectados"

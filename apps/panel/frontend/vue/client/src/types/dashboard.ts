@@ -108,19 +108,21 @@ export interface RemoteCommand {
 export interface ClientIdentification {
   type: 'identify'
   clientId: string
+  availableScreens?: string[]
   timestamp: string
 }
 
 // ============ MENSAGENS WEBSOCKET ============
-export type WebSocketMessage = 
-  | TicketsData 
-  | ProjectsData 
-  | DashboardData 
-  | NotificationAlert 
-  | RemoteCommand 
+export type WebSocketMessage =
+  | TicketsData
+  | ProjectsData
+  | DashboardData
+  | NotificationAlert
+  | RemoteCommand
   | ClientIdentification
   | { type: 'connection_established'; clientId: string; client_ip?: string }
   | { type: 'client_ip_response'; client_ip: string }
+  | { type: 'change_screen'; screen: string }
   | { type: 'error'; message: string }
 
 // ============ ESTADO DA APLICAÇÃO ============
