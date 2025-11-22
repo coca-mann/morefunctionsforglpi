@@ -417,7 +417,7 @@ def newpanel_dashboard_departmentteam():
     
     sql="""
     SELECT 
-    CONCAT(U.firstname, ' ', U.realname) AS nome_completo,
+    U.firstname AS nome_completo,
     U.name AS login,
     CASE 
         WHEN G.name LIKE '%Analistas%' THEN 'Analistas'
