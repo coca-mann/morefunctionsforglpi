@@ -30,53 +30,53 @@
         :key="project.id"
         class="relative bg-slate-800 border border-slate-700 rounded p-6"
       >
-        <!-- Status (Ícone no Canto) -->
-        <div 
-          class="absolute top-6 right-6 w-3.5 h-3.5 rounded-full"
-          :style="{ backgroundColor: project.cor_estado }"
-          :title="project.estado"
-        ></div>
-
         <!-- Conteúdo do Card com Espaçamento Vertical -->
         <div class="flex flex-col h-full space-y-6">
 
-          <!-- Título do Projeto -->
-          <div>
-            <h3 class="text-lg font-bold text-slate-100 font-mono pr-6">{{ project.nome_projeto }}</h3>
-            <p class="text-xs text-slate-400 mt-1">Responsável: {{ project.responsavel }}</p>
+          <!-- Título do Projeto e Status Alinhado -->
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-lg font-bold text-slate-100 font-mono">{{ project.nome_projeto }}</h3>
+              <p class="text-xs text-slate-400 mt-1">Responsável: {{ project.responsavel }}</p>
+            </div>
+            <!-- Status (Ícone) -->
+            <div
+              class="w-3.5 h-3.5 rounded-full"
+              :style="{ backgroundColor: project.cor_estado }"
+              :title="project.estado"
+            ></div>
           </div>
           
-          <!-- Métricas (Gráfico de Rosca) -->
-          <div class="border-t border-slate-700 pt-6">
-            <div v-if="project.tarefas_concluidas + project.tarefas_em_andamento + project.tarefas_pendentes > 0">
-              <ProjectTaskDistributionChart 
-                :completed="project.tarefas_concluidas"
-                :in-progress="project.tarefas_em_andamento"
-                :pending="project.tarefas_pendentes"
-              />
-            </div>
-            <div v-else class="h-32 flex items-center justify-center">
-                <p class="text-sm text-slate-500 font-mono">Nenhuma tarefa neste projeto.</p>
-            </div>
-          </div>
+                    <!-- Métricas (Gráfico de Rosca) e Barra de Progresso Vertical -->
+                    <div class="flex items-center justify-between border-t border-slate-700 pt-6 space-x-4">
+                      <div class="flex-grow">
+                        <div v-if="project.tarefas_concluidas + project.tarefas_em_andamento + project.tarefas_pendentes > 0">
+                          <ProjectTaskDistributionChart
+                            :completed="project.tarefas_concluidas"
+                            :in-progress="project.tarefas_em_andamento"
+                            :pending="project.tarefas_pendentes"
+                          />
+                        </div>
+                        <div v-else class="h-32 flex items-center justify-center">
+                            <p class="text-sm text-slate-500 font-mono">Nenhuma tarefa neste projeto.</p>
+                        </div>
+                      </div>
           
-          <!-- Barra de Progresso -->
-          <div class="pt-6 border-t border-slate-700">
-            <div class="flex justify-between items-center mb-2">
-              <span class="text-xs text-slate-400 font-mono">Progresso Geral</span>
-              <span class="text-sm font-bold text-slate-300 font-mono">{{ project.progresso_geral_projeto }}%</span>
-            </div>
-            <div class="w-full bg-slate-900 rounded h-2 overflow-hidden">
-              <div 
-                :style="{ width: `${project.progresso_geral_projeto}%`, backgroundColor: 'var(--status-1)' }"
-                class="h-full transition-all duration-300"
-              />
-            </div>
-          </div>
-          
+                      <!-- Barra de Progresso Vertical -->
+                      <div class="flex flex-col items-center h-32 justify-end">
+                        <span class="text-xs text-slate-400 font-mono mb-1">Progresso</span>
+                        <div class="h-full w-8 bg-slate-900 rounded overflow-hidden flex flex-col-reverse">
+                          <div
+                            :style="{ height: `${project.progresso_geral_projeto}%`, backgroundColor: 'var(--status-1)' }"
+                            class="w-full transition-all duration-300"
+                          />
+                        </div>
+                        <span class="text-sm font-bold text-slate-300 font-mono mt-1">{{ project.progresso_geral_projeto }}%</span>
+                      </div>
+                    </div>          
           <!-- Data de Conclusão Prevista -->
-          <div class="flex-grow flex items-end justify-center">
-            <div class="text-xs font-mono pt-4 text-center" :class="getUrgencyInfo(project.data_entrega_vigente).cssClass">
+          <div class="flex items-end justify-center">
+            <div class="text-xs font-mono text-center" :class="getUrgencyInfo(project.data_entrega_vigente).cssClass">
               {{ getUrgencyInfo(project.data_entrega_vigente).text }}
             </div>
           </div>
@@ -109,7 +109,8 @@ interface Project {
 // Define a estrutura da mensagem do WebSocket para atualização de projetos
 interface ProjectsUpdateMessage {
   type: 'projects_update';
-  data: Omit<Project, 'id'>[]; // O 'id' é gerado no frontend
+  // Espera que cada projeto tenha um ID vindo do backend
+  data: (Omit<Project, 'id'> & { id: string | number })[];
 }
 
 
@@ -129,9 +130,9 @@ const projectStatuses = computed(() => {
 
 watch(lastMessage, (message: ProjectsUpdateMessage) => {
   if (message && message.type === 'projects_update' && message.data) {
-    projects.value = message.data.map((p, index) => ({
+    projects.value = message.data.map(p => ({
       ...p,
-      id: `${p.nome_projeto}-${index}`, // Cria um ID único
+      id: String(p.id), // Usa o ID do backend, garantindo que seja string
       tarefas_concluidas: parseInt(p.tarefas_concluidas as any, 10) || 0,
       tarefas_em_andamento: parseInt(p.tarefas_em_andamento as any, 10) || 0,
       tarefas_pendentes: parseInt(p.tarefas_pendentes as any, 10) || 0,

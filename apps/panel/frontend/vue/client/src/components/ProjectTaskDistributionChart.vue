@@ -49,7 +49,8 @@ const chartData = computed<ChartData<'doughnut'>>(() => ({
 const chartOptions = computed<ChartOptions<'doughnut'>>(() => ({
   responsive: true,
   aspectRatio: 1,
-  cutout: '75%',
+  cutout: '60%', // Aumentar a espessura do doughnut para melhor visualização dos labels
+  animation: false,
   plugins: {
     legend: {
       display: false,
@@ -64,7 +65,16 @@ const chartOptions = computed<ChartOptions<'doughnut'>>(() => ({
       }
     },
     datalabels: {
-        display: false, // Opcional: desativar para não poluir o gráfico pequeno
+        display: true, // Ativar exibição dos rótulos
+        color: '#fff', // Cor do texto
+        font: {
+            family: 'monospace',
+            weight: 'bold',
+            size: 14, // Aumentar o tamanho da fonte
+        },
+        formatter: (value) => {
+            return value > 0 ? value : ''; // Exibir apenas valores maiores que 0
+        },
     },
   },
 }));

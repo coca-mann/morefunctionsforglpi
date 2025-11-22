@@ -74,6 +74,7 @@ const chartOptions = computed<ChartOptions<'doughnut'>>(() => ({
   responsive: true,
   aspectRatio: 1,
   cutout: '60%', // Gráfico um pouco mais grosso para caber os labels
+  animation: false,
   plugins: {
     legend: {
       display: false,
