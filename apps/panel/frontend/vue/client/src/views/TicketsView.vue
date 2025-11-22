@@ -1,7 +1,7 @@
 <template>
   <div class="p-4">
     <!-- Header: Título e Contadores -->
-    <div class="flex justify-between items-center mb-4">
+    <div class="flex justify-between items-center mb-2">
       <!-- Título -->
       <div>
         <h2 class="text-2xl font-bold text-slate-100 font-mono">Tickets de Atendimento</h2>
@@ -10,25 +10,25 @@
 
       <!-- Contadores -->
       <div class="grid grid-cols-4 gap-4">
-        <div class="bg-slate-800 border border-slate-700 rounded p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded p-3">
           <div class="text-sm text-slate-400 font-mono">CRÍTICO</div>
           <div class="text-2xl font-bold font-mono mt-1" style="color: var(--urgency-5);">
             {{ criticalCount }}
           </div>
         </div>
-        <div class="bg-slate-800 border border-slate-700 rounded p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded p-3">
           <div class="text-sm text-slate-400 font-mono">ALTO</div>
           <div class="text-2xl font-bold font-mono mt-1" style="color: var(--urgency-4);">
             {{ highCount }}
           </div>
         </div>
-        <div class="bg-slate-800 border border-slate-700 rounded p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded p-3">
           <div class="text-sm text-slate-400 font-mono">MÉDIO</div>
           <div class="text-2xl font-bold font-mono mt-1" style="color: var(--urgency-3);">
             {{ mediumCount }}
           </div>
         </div>
-        <div class="bg-slate-800 border border-slate-700 rounded p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded p-3">
           <div class="text-sm text-slate-400 font-mono">BAIXO</div>
           <div class="text-2xl font-bold font-mono mt-1" style="color: var(--urgency-1);">
             {{ lowCount }}
@@ -43,28 +43,28 @@
         <thead class="bg-slate-900 border-b border-slate-700">
           <tr>
             <th class="px-4 py-3 text-center text-slate-300">Status</th>
-            <th class="px-4 py-3 text-center text-slate-300">Abertura</th>
-            <th class="px-4 py-3 text-center text-slate-300">Entidade</th>
-            <th class="px-4 py-3 text-left text-slate-300">Título</th>
+            <th class="px-4 py-3 text-center text-slate-300 w-1/12">Abertura</th>
+            <th class="px-4 py-3 text-center text-slate-300 w-1/6">Entidade</th>
+            <th class="px-4 py-3 text-left text-slate-300 w-3/6">Título</th>
             <th class="px-4 py-3 text-center text-slate-300">Urgência</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="ticket in tickets" :key="ticket.id"
             class="border-b border-slate-700 hover:bg-slate-700 transition-colors">
-            <td class="px-4 py-3 text-center">
-              <span class="px-3 py-1 rounded font-bold text-xs whitespace-nowrap" :style="getStatusStyle(ticket.idstatus)">
+            <td class="px-3 py-2 text-center">
+              <span class="inline-block px-2 py-1 rounded font-bold text-sm whitespace-nowrap" :style="getStatusStyle(ticket.idstatus)">
                 {{ ticket.status }}
               </span>
             </td>
-            <td class="px-4 py-3 text-slate-300 text-center text-xs">
+            <td class="px-3 py-2 text-slate-300 text-center text-base">
               <div>{{ ticket.abertura ? ticket.abertura.split(' ')[0] : '-' }}</div>
               <div>{{ ticket.abertura ? ticket.abertura.split(' ')[1] : '-' }}</div>
             </td>
-            <td class="px-4 py-3 text-slate-300 text-center">{{ ticket.entidade }}</td>
-            <td class="px-4 py-3 text-slate-200">{{ ticket.titulo }}</td>
-            <td class="px-4 py-3 text-center">
-              <span class="px-3 py-1 rounded font-bold text-xs whitespace-nowrap" :style="getUrgencyStyle(ticket.urgencia)">
+            <td class="px-3 py-2 text-slate-300 text-center text-lg">{{ ticket.entidade }}</td>
+            <td class="px-3 py-2 text-slate-200 text-lg">{{ ticket.titulo }}</td>
+            <td class="px-3 py-2 text-center">
+              <span class="inline-block px-2 py-1 rounded font-bold text-sm whitespace-nowrap" :style="getUrgencyStyle(ticket.urgencia)">
                 {{ ticket.urgencia }}
               </span>
             </td>
