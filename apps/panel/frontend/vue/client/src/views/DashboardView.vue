@@ -45,37 +45,15 @@
     </div>
 
     <!-- Equipe -->
-    <div class="grid grid-cols-2 gap-6">
-      <!-- Técnicos de Manutenção -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Gráfico de Técnicos -->
       <div class="bg-slate-800 border border-slate-700 rounded p-6">
-        <h3 class="text-lg font-bold text-slate-100 font-mono mb-4">Técnicos de Manutenção</h3>
-        <div class="space-y-3">
-          <div v-for="tech in technicians" :key="tech.login"
-            class="flex flex-col p-3 bg-slate-900 rounded">
-            <div class="text-base font-bold font-mono text-slate-100 mb-2">{{ tech.nome_completo }}</div>
-            <div class="text-xs text-slate-400 flex justify-around">
-              <div>Tickets: <strong class="text-blue-400">{{ tech.qtd_tickets_atribuidos }}</strong></div>
-              <div>Projetos: <strong class="text-blue-400">{{ tech.qtd_projetos_relacionados }}</strong></div>
-              <div>Tarefas: <strong class="text-blue-400">{{ tech.qtd_total_tarefas }}</strong></div>
-            </div>
-          </div>
-        </div>
+        <TeamWorkloadChart title="Técnicos de Manutenção" :members="technicians" />
       </div>
 
-      <!-- Analistas de Sistemas -->
+      <!-- Gráfico de Analistas -->
       <div class="bg-slate-800 border border-slate-700 rounded p-6">
-        <h3 class="text-lg font-bold text-slate-100 font-mono mb-4">Analistas de Sistemas</h3>
-        <div class="space-y-3">
-          <div v-for="analyst in analysts" :key="analyst.login"
-            class="flex flex-col p-3 bg-slate-900 rounded">
-            <div class="text-base font-bold font-mono text-slate-100 mb-2">{{ analyst.nome_completo }}</div>
-            <div class="text-xs text-slate-400 flex justify-around">
-              <div>Tickets: <strong class="text-blue-400">{{ analyst.qtd_tickets_atribuidos }}</strong></div>
-              <div>Projetos: <strong class="text-blue-400">{{ analyst.qtd_projetos_relacionados }}</strong></div>
-              <div>Tarefas: <strong class="text-blue-400">{{ analyst.qtd_total_tarefas }}</strong></div>
-            </div>
-          </div>
-        </div>
+        <TeamWorkloadChart title="Analistas de Sistemas" :members="analysts" />
       </div>
     </div>
 
@@ -104,7 +82,9 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { useWebSocket } from '../composables/useWebSocket'
+import TeamWorkloadChart from '@/components/TeamWorkloadChart.vue'
 
+// Definição da estrutura de um membro da equipe
 interface TeamMember {
   nome_completo: string
   login: string
@@ -113,6 +93,32 @@ interface TeamMember {
   qtd_projetos_relacionados: number
   qtd_total_tarefas: number
 }
+
+// Definição da estrutura dos KPIs recebidos via WebSocket
+interface DashboardKpis {
+  total_hoje: number;
+  diferenca: number;
+  solucao_mes_atual: string | null;
+  diferenca_segundos: string;
+  resolved_today: number;
+  porcentagem_satisfacao: string;
+  qtd_pesquisas_respondidas: number;
+  team_members: TeamMember[];
+}
+
+// Definição dos tipos de mensagens que podemos receber
+interface DashboardUpdateMessage {
+  type: 'dashboard_update';
+  kpis: DashboardKpis;
+}
+
+interface TicketsUpdateMessage {
+    type: 'tickets_update';
+    counters: any; // Mantenha como 'any' se a estrutura for desconhecida ou variável
+}
+
+type WebSocketMessage = DashboardUpdateMessage | TicketsUpdateMessage;
+
 
 interface Activity {
   time: string
@@ -135,25 +141,26 @@ const technicians = ref<TeamMember[]>([])
 const analysts = ref<TeamMember[]>([])
 
 // Watch for WebSocket messages
-watch(lastMessage, (message) => {
+watch(lastMessage, (message: WebSocketMessage) => {
   // Handle new dashboard-specific KPI updates
-  if (message && message.type === 'dashboard_update' && message.kpis) {
-    openTickets.value = message.kpis.total_hoje ?? 0
-    differenceSinceYesterday.value = message.kpis.diferenca ?? 0
-    avgResponseTime.value = formatResponseTime(message.kpis.solucao_mes_atual)
-    avgResponseTimeDiff.value = parseFloat(message.kpis.diferenca_segundos) || 0
-    resolvedToday.value = message.kpis.resolved_today ?? 0
-    customerSatisfaction.value = Math.round(parseFloat(message.kpis.porcentagem_satisfacao)) || 0
-    surveyCount.value = message.kpis.qtd_pesquisas_respondidas ?? 0
+  if (message && message.type === 'dashboard_update') {
+    const kpis = message.kpis; // Agora 'kpis' é totalmente tipado
+    openTickets.value = kpis.total_hoje ?? 0
+    differenceSinceYesterday.value = kpis.diferenca ?? 0
+    avgResponseTime.value = formatResponseTime(kpis.solucao_mes_atual)
+    avgResponseTimeDiff.value = parseFloat(kpis.diferenca_segundos) || 0
+    resolvedToday.value = kpis.resolved_today ?? 0
+    customerSatisfaction.value = Math.round(parseFloat(kpis.porcentagem_satisfacao)) || 0
+    surveyCount.value = kpis.qtd_pesquisas_respondidas ?? 0
 
-    if (message.kpis.team_members) {
-      technicians.value = message.kpis.team_members.filter((m: TeamMember) => m.grupo_perfil === 'Técnicos');
-      analysts.value = message.kpis.team_members.filter((m: TeamMember) => m.grupo_perfil === 'Analistas');
+    if (kpis.team_members) {
+      technicians.value = kpis.team_members.filter((m) => m.grupo_perfil === 'Técnicos');
+      analysts.value = kpis.team_members.filter((m) => m.grupo_perfil === 'Analistas');
     }
   }
 
   // Handle updates from the general ticket poll
-  if (message && message.type === 'tickets_update' && message.counters) {
+  if (message && message.type === 'tickets_update') {
     // This could be deprecated if dashboard_update provides all KPIs
     // resolvedToday.value = message.counters.resolved_today // Removed, now handled by dashboard_update
   }
