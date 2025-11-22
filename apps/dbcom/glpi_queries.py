@@ -496,7 +496,7 @@ def newpanel_projects_data():
     PS.name AS estado,
     PS.color AS cor_estado,
     CASE 
-        WHEN P.users_id > 0 THEN CONCAT(U.realname, ' ', U.firstname) 
+        WHEN P.users_id > 0 THEN CONCAT(U.firstname, ' ', U.realname) 
         WHEN P.groups_id > 0 THEN G.name 
         ELSE 'Não Atribuído' 
     END AS responsavel,
@@ -521,7 +521,8 @@ def newpanel_projects_data():
     LEFT JOIN 
         glpi_projecttasks PT ON P.id = PT.projects_id
     WHERE 
-        P.is_deleted = 0
+        P.is_deleted = 0 AND
+        P.projectstates_id != 3
     GROUP BY 
         P.id
     ORDER BY 
