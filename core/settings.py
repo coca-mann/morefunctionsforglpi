@@ -29,7 +29,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 DB_ENCRYPTION_KEY = os.getenv('DB_ENCRYPTION_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
@@ -55,10 +55,23 @@ INSTALLED_APPS = [
     'channels',
 ]
 
+# Em produção, é crucial usar uma camada que funcione entre processos, como o Redis.
+# Em desenvolvimento, você pode usar o backend 'locmem' ou rodar uma instância local do Redis.
+REDIS_HOST = os.getenv('REDIS_HOST')
+REDIS_PORT = int(os.getenv('REDIS_PORT'))
+
 CHANNEL_LAYERS = {
     "default": {
-        "BACKEND": "channels.layers.InMemoryChannelLayer"
-    }
+        # BACKEND para produção. Exige 'channels-redis' instalado.
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [(REDIS_HOST, REDIS_PORT)],
+        },
+    },
+    # "default": {
+    #     # BACKEND para desenvolvimento (funciona apenas em um único processo).
+    #     "BACKEND": "channels.layers.InMemoryChannelLayer"
+    # }
 }
 
 ASGI_APPLICATION = 'core.asgi.application'
