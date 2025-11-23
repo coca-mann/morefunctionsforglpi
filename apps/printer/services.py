@@ -53,21 +53,17 @@ def enviar_para_servico_de_impressao(pdf_bytes, print_server: PrintServer, print
     
     
 
-def gerar_e_imprimir_etiquetas(lista_de_etiquetas: list, print_server: PrintServer, printer_name: str):
+def gerar_e_imprimir_etiquetas(lista_de_etiquetas: list, print_server: PrintServer, printer_name: str, layout: EtiquetaLayout):
     """
-    Busca o layout padrão, GERA UM PDF DINÂMICO lendo o 'layout_json',
+    Usa o layout fornecido, GERA UM PDF DINÂMICO lendo o 'layout_json',
     imprime e descarta.
     """
     if not lista_de_etiquetas:
         return (False, "A lista de etiquetas para impressão está vazia.")
 
-    # --- 1. BUSCAR O LAYOUT PADRÃO (Sem mudança) ---
-    try:
-        layout = EtiquetaLayout.objects.get(padrao=True)
-    except EtiquetaLayout.DoesNotExist:
-        return (False, "Nenhum Layout de Etiqueta foi definido como padrão no sistema.")
-    except EtiquetaLayout.MultipleObjectsReturned:
-        return (False, "ERRO: Mais de um Layout de Etiqueta está marcado como padrão.")
+    # --- 1. USA O LAYOUT FORNECIDO ---
+    if not layout:
+        return (False, "Nenhum layout de etiqueta foi fornecido para a impressão.")
 
     # --- 2. REGISTRAR FONTE (Sem mudança) ---
     try:

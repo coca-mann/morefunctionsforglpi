@@ -143,6 +143,13 @@
 <div class="controls-bar">
   <button id="print-button" class="button" disabled>Imprimir Selecionados</button>
   
+  <div id="layout-container" style="display: flex; align-items: center; gap: 5px;">
+      <label for="layout-select" style="font-weight: bold; color: var(--body-fg);">Layout:</label>
+      <select id="layout-select" name="layout" class="select">
+          <option value="">Carregando layouts...</option>
+      </select>
+  </div>
+  
   <div class="search-wrapper">
     <input type="search" id="search-input" placeholder="Filtrar por nome do ativo...">
   </div>
@@ -187,35 +194,59 @@ document.addEventListener('DOMContentLoaded', () => {
     const printMessage = document.getElementById('print-message');
     const resultsBody = document.getElementById('results-body');
     const headers = document.querySelectorAll('#results-table th[data-key]');
-    
-    // ---- NOVO: Referência ao campo de pesquisa ----
     const searchInput = document.getElementById('search-input');
+    const layoutSelect = document.getElementById('layout-select');
+    const layoutContainer = document.getElementById('layout-container');
 
     // --- URLs ---
     const dataApiUrl = "/api/get-assets/";
-    const printApiUrl = '/api/imprimir/'; 
+    const printApiUrl = '/api/imprimir/';
+    const layoutsApiUrl = '/api/layouts/';
 
     // --- Variáveis de Estado ---
-    let fetchedAssets = []; // Armazena os dados brutos da API
+    let fetchedAssets = [];
     let currentSort = { key: 'asset_name', dir: 'asc' };
 
-    // --- Função para buscar o Token CSRF ---
+    // --- Inicialização ---
+    fetchLayouts();
+
+    // --- Funções ---
     function getCsrfToken() {
         return document.cookie.split('; ')
             .find(row => row.startsWith('csrftoken='))
             ?.split('=')[1];
     }
 
-    // --- 1. Ação dos Botões de Filtro ---
+    async function fetchLayouts() {
+        try {
+            const response = await fetch(layoutsApiUrl);
+            if (!response.ok) throw new Error(`Falha ao buscar layouts (status: ${response.status})`);
+            const layouts = await response.json();
+
+            if (layouts.length > 0) {
+                layoutSelect.innerHTML = ''; // Limpa "Carregando..."
+                layouts.forEach(layout => {
+                    const option = document.createElement('option');
+                    option.value = layout.id;
+                    option.textContent = layout.nome;
+                    if (layout.padrao) {
+                        option.selected = true;
+                    }
+                    layoutSelect.appendChild(option);
+                });
+            } else {
+                layoutSelect.innerHTML = '<option value="">Nenhum layout encontrado</option>';
+            }
+        } catch (error) {
+            console.error('Erro ao buscar layouts:', error);
+            layoutSelect.innerHTML = '<option value="">Erro ao carregar</option>';
+        }
+    }
+
     filterButtons.forEach(button => {
         button.addEventListener('click', () => {
-            
-            // 1. Remove a classe 'active' de TODOS os botões
             filterButtons.forEach(btn => btn.classList.remove('active'));
-            // 2. Adiciona a classe 'active' apenas ao botão que foi clicado
             button.classList.add('active');
-            // ---- FIM DA MUDANÇA ----
-
             const assetType = button.dataset.type;
             fetchAssets(assetType);
         });
@@ -227,31 +258,26 @@ document.addEventListener('DOMContentLoaded', () => {
         selectAllCheckbox.checked = false;
         loader.style.display = 'block';
         printMessage.innerText = '';
-        
-        // ---- NOVO: Limpa o campo de pesquisa ao trocar de tipo ----
         searchInput.value = ''; 
-        
-        fetchedAssets = []; // Limpa dados antigos
+        fetchedAssets = [];
 
         try {
             const response = await fetch(`${dataApiUrl}?type=${assetType}`);
             if (!response.ok) throw new Error(`Erro na API: ${response.statusText}`);
             
             const assets = await response.json();
-            fetchedAssets = assets; // Salva os dados brutos
-            
+            fetchedAssets = assets;
             applyFiltersAndSort(); 
 
         } catch (error) {
-            fetchedAssets = []; // Garante que a lista esteja vazia
-            applyFiltersAndSort(); // Renderiza a mensagem de erro/vazio
+            fetchedAssets = [];
+            applyFiltersAndSort();
             console.error(error);
         } finally {
             loader.style.display = 'none';
         }
     }
 
-    // --- 2. Lógica de Ordenação (Evento de clique) ---
     headers.forEach(header => {
         header.addEventListener('click', () => {
             const key = header.dataset.key;
@@ -262,38 +288,28 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             currentSort = { key: key, dir: newDir };
-            applyFiltersAndSort(); // Re-filtra, re-ordena e re-renderiza
+            applyFiltersAndSort();
         });
     });
 
-    // --- 3. NOVO: Lógica de Filtro (Evento de digitação) ---
     searchInput.addEventListener('input', () => {
-        // A cada tecla digitada, re-filtra, re-ordena e re-renderiza
         applyFiltersAndSort();
     });
 
-    // --- 4. NOVO: Função Central de Filtro, Ordenação e Renderização ---
     function applyFiltersAndSort() {
-        
-        // --- ETAPA DE FILTRO ---
         const searchTerm = searchInput.value.toLowerCase();
         let processedAssets = fetchedAssets;
 
         if (searchTerm) {
-            processedAssets = fetchedAssets.filter(asset => {
-                // Filtra pelo nome do ativo (asset_name)
-                return asset.asset_name.toLowerCase().includes(searchTerm);
-            });
+            processedAssets = fetchedAssets.filter(asset => 
+                asset.asset_name.toLowerCase().includes(searchTerm)
+            );
         }
 
-        // --- ETAPA DE ORDENAÇÃO ---
         const { key, dir } = currentSort;
-        
         const sortedAssets = [...processedAssets].sort((a, b) => {
             let valA = a[key] ? a[key].toString().toLowerCase() : '';
             let valB = b[key] ? b[key].toString().toLowerCase() : '';
-
-            // Tenta ordenar numericamente
             const numA = parseFloat(valA);
             const numB = parseFloat(valB);
             
@@ -307,72 +323,42 @@ document.addEventListener('DOMContentLoaded', () => {
             return 0;
         });
 
-        // Atualiza os indicadores visuais nos cabeçalhos
         headers.forEach(h => {
             if (h.dataset.key === key) h.dataset.sortDir = dir;
             else h.dataset.sortDir = '';
         });
 
-        // --- ETAPA DE RENDERIZAÇÃO ---
-        renderTable(sortedAssets); // Renderiza a lista final
+        renderTable(sortedAssets);
     }
 
-    // --- 5. Lógica de Renderização da Tabela (Atualizada) ---
-    // (A antiga 'sortAndRender' foi dividida)
     function renderTable(assetsToRender) {
-        resultsBody.innerHTML = ''; // Limpa a tabela
+        resultsBody.innerHTML = '';
         
-        // ---- Lógica de "Nenhum resultado" melhorada ----
         if (assetsToRender.length === 0) {
             const searchTerm = searchInput.value;
+            let message = 'Nenhum item encontrado para este tipo de ativo.';
             if (searchTerm) {
-                // Caso 1: Filtrou e não achou nada
-                resultsBody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 20px;">Nenhum item corresponde ao filtro "<b>${searchTerm}</b>".</td></tr>`;
-            } else if (fetchedAssets.length > 0) {
-                 // Caso 2: Deveria ter itens, mas o filtro limpou (nunca deve acontecer, mas é seguro)
-                 resultsBody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 20px;">Nenhum item corresponde ao filtro.</td></tr>`;
-            } else {
-                // Caso 3: A API não retornou nada
-                resultsBody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 20px;">Nenhum item encontrado para este tipo de ativo.</td></tr>`;
+                message = `Nenhum item corresponde ao filtro "<b>${searchTerm}</b>".`;
             }
-            return; // Para a execução
+            resultsBody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 20px;">${message}</td></tr>`;
+            return;
         }
         
-        // Constrói as linhas da tabela
         assetsToRender.forEach(asset => {
             const tr = document.createElement('tr');
-            
             tr.dataset.titulo = asset.asset_name; 
             tr.dataset.url = asset.url;
 
-            // Coluna 1: Checkbox
-            const tdCheck = document.createElement('td');
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.className = 'asset-checkbox';
-            tdCheck.appendChild(checkbox);
-            tr.appendChild(tdCheck);
-
-            // Coluna 2: Nome do Ativo
-            const tdName = document.createElement('td');
-            tdName.textContent = asset.asset_name;
-            tr.appendChild(tdName);
-
-            // Coluna 3: Entidade
-            const tdEntity = document.createElement('td');
-            tdEntity.textContent = asset.entity;
-            tr.appendChild(tdEntity);
-
-            // Coluna 4: Tipo de Ativo
-            const tdType = document.createElement('td');
-            tdType.textContent = asset.asset_type;
-            tr.appendChild(tdType);
-
+            tr.innerHTML = `
+                <td><input type="checkbox" class="asset-checkbox"></td>
+                <td>${asset.asset_name}</td>
+                <td>${asset.entity}</td>
+                <td>${asset.asset_type}</td>
+            `;
             resultsBody.appendChild(tr);
         });
     }
 
-    // --- 6. Ação do "Marcar Todos" (Sem mudança) ---
     selectAllCheckbox.addEventListener('change', () => {
         const checkboxes = resultsBody.querySelectorAll('.asset-checkbox');
         checkboxes.forEach(cb => {
@@ -381,7 +367,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updatePrintButtonState();
     });
 
-    // --- 7. Ação do Botão Imprimir (Sem mudança) ---
     printButton.addEventListener('click', () => {
         sendToPrintAPI();
     });
@@ -389,6 +374,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function sendToPrintAPI() {
         const selectedItems = [];
         const checkedCheckboxes = resultsBody.querySelectorAll('.asset-checkbox:checked');
+        const layoutId = layoutSelect.value;
 
         checkedCheckboxes.forEach(cb => {
             const tr = cb.closest('tr');
@@ -415,7 +401,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': getCsrfToken()
                 },
-                body: JSON.stringify(selectedItems)
+                body: JSON.stringify({
+                    items: selectedItems,
+                    layout_id: layoutId
+                })
             });
             const result = await response.json();
 
@@ -438,7 +427,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 8. Habilitar/Desabilitar Botão de Impressão (Sem mudança) ---
     resultsBody.addEventListener('change', (event) => {
         if (event.target.classList.contains('asset-checkbox')) {
             updatePrintButtonState();

@@ -135,13 +135,31 @@ def selecionar_layout_padrao_api(request, pk):
 def imprimir_etiquetas_api(request):
     """
     Recebe uma lista de objetos com 'titulo' e 'url' e os envia para impressão.
-    AGORA LÊ O SERVIDOR ATIVO NO BANCO DE DADOS.
+    AGORA LÊ O SERVIDOR ATIVO E O LAYOUT SELECIONADO.
     """
-    serializer = EtiquetaParaImprimirSerializer(data=request.data, many=True)
+    items_data = request.data.get('items')
+    layout_id = request.data.get('layout_id')
+
+    if not items_data:
+        return Response({"status": "erro", "mensagem": "A lista 'items' de ativos para impressão não foi enviada."}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = EtiquetaParaImprimirSerializer(data=items_data, many=True)
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    # --- LÓGICA DE IMPRESSÃO MODIFICADA ---
+
+    # --- LÓGICA DE LAYOUT ---
+    try:
+        if layout_id:
+            layout = EtiquetaLayout.objects.get(pk=layout_id)
+        else:
+            # Fallback para o layout padrão se nenhum for enviado
+            layout = EtiquetaLayout.objects.get(padrao=True)
+    except EtiquetaLayout.DoesNotExist:
+        return Response({"status": "erro", "mensagem": "O layout de etiqueta especificado (ou o padrão) não foi encontrado."}, status=status.HTTP_404_NOT_FOUND)
+    except EtiquetaLayout.MultipleObjectsReturned:
+         return Response({"status": "erro", "mensagem": "ERRO CRÍTICO: Mais de um layout de etiqueta está marcado como 'padrão'. Verifique o admin."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    # --- LÓGICA DE IMPRESSÃO (semelhante à anterior) ---
     try:
         # 1. Encontra o servidor de impressão ATIVO
         server = PrintServer.objects.get(ativo=True)
@@ -153,14 +171,14 @@ def imprimir_etiquetas_api(request):
     if not server.nome_impressora_padrao:
         return Response({"status": "erro", "mensagem": f"O servidor de impressão '{server.nome}' não tem uma impressora padrão selecionada."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    # 2. Chama o serviço (que agora precisa do 'server' e 'printer_name')
+    # 2. Chama o serviço
     dados_validados = serializer.validated_data
     sucesso, mensagem = gerar_e_imprimir_etiquetas(
         lista_de_etiquetas=dados_validados,
         print_server=server,
-        printer_name=server.nome_impressora_padrao
+        printer_name=server.nome_impressora_padrao,
+        layout=layout # Passando o layout para o serviço
     )
-    # --- FIM DA MODIFICAÇÃO ---
     
     if sucesso:
         return Response({'status': 'sucesso', 'mensagem': mensagem})
