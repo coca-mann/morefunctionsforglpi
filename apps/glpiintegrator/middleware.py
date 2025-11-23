@@ -7,8 +7,7 @@ class AllowAdminInIframeMiddleware:
         
         admin_path = '/admin/'
         
-        if request.path.startswith(admin_path):
-            if response.has_header('X-Frame-Options'):
-                response.delete_header('X-Frame-Options')
+        if not request.path.startswith(admin_path):
+            response['X-Frame-Options'] = 'SAMEORIGIN'
         
         return response
