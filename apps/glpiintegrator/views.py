@@ -37,32 +37,29 @@ def glpi_sso(request):
     # 4. Extract data from payload
     glpi_user_id = payload.get('uid')
     email = payload.get('email')
-    first_name = payload.get('first_name', '')
-    last_name = payload.get('last_name', '')
+    first_name = payload.get('name', '')
     
     if not glpi_user_id or not email:
         return HttpResponseForbidden("Missing user ID or email in payload.")
     
-    # 5. Find or create user
+    # 5. Find or create user and link GLPI Profile
     try:
         glpi_profile = GlpiProfile.objects.select_related('user').get(glpi_id=glpi_user_id)
         user = glpi_profile.user
     except GlpiProfile.DoesNotExist:
-        if User.objects.filter(email=email).exists():
-            return HttpResponseForbidden(f"A user with email {email} already exists but is not linked to a GLPI account.")
-        
-        new_user = User.objects.create(
-            username=email,
+        user, created = User.objects.get_or_create(
             email=email,
-            first_name=first_name,
-            last_name=last_name
+            defaults={
+                'username': email,
+                'first_name': first_name,
+            }
         )
         
-        new_user.set_password(User.make_random_password(length=24))
-        new_user.save()
+        if created:
+            user.set_password(User.make_random_password(length=24))
+            user.save()
         
-        GlpiProfile.objects.create(user=new_user, glpi_id=glpi_user_id)
-        user = new_user
+        GlpiProfile.objects.create(user=user, glpi_id=glpi_user_id)
         
     # 6. Log the user in and redirect
     if user is not None and user.is_active:
