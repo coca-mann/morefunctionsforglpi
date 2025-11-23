@@ -33,6 +33,11 @@ DEBUG = os.getenv('DEBUG')
 
 ALLOWED_HOSTS = ['*']
 
+# Permissões para ambiente de desenvolvimento do Juliao
+CSRF_TRUSTED_ORIGINS = ['https://morefunctionsforglpi.luffyslair.tec.br']
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+
 BASE_URL = os.getenv('BASE_URL')
 
 
