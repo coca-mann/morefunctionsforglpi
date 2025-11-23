@@ -20,6 +20,7 @@ urlpatterns = [
     path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/auth/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
     path('reports/', include('apps.reports.urls', namespace='reports')),
+    path('glpi-integrator/', include('apps.glpiintegrator.urls')),
 ]
 
 if settings.DEBUG:

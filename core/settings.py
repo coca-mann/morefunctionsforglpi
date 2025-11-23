@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'apps.panel',
     'apps.dbcom',
     'apps.reports',
+    'apps.glpiintegrator',
     'channels',
 ]
 
@@ -226,6 +227,7 @@ CORS_ALLOWED_ORIGINS = [
     # Ambiente de desenvolvimento (Vite dev server)
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "https://morefunctionsforglpi.luffyslair.tec.br/"
 
     # Ambiente de produção (onde o Nginx está servindo o frontend)
     "http://172.16.0.250",
