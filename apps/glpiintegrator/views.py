@@ -52,6 +52,7 @@ def glpi_sso(request):
             defaults={
                 'username': email,
                 'first_name': first_name,
+                'is_staff': True,
             }
         )
         
