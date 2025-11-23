@@ -19,7 +19,7 @@ def glpi_sso(request):
         return HttpResponseForbidden("Missing payload or signature")
     
     # 1. Validate signature
-    expected_signature = hmac.new(SECRET_KEY, payload_b64.encode('utf-8'), hashlib.sha256).hexdigest()
+    expected_signature = hmac.new(SECRET_KEY.encode('utf-8'), payload_b64.encode('utf-8'), hashlib.sha256).hexdigest()
     if not hmac.compare_digest(signature, expected_signature):
         return HttpResponseForbidden("Invalid signature")
     
@@ -58,7 +58,7 @@ def glpi_sso(request):
             last_name=last_name
         )
         
-        new_user.set_password(User.objects.make_random_password(length=24))
+        new_user.set_password(User.make_random_password(length=24))
         new_user.save()
         
         GlpiProfile.objects.create(user=new_user, glpi_id=glpi_user_id)
