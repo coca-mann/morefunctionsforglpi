@@ -91,6 +91,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'apps.glpiintegrator.middleware.AllowAdminInIframeMiddleware',
 ]
 
 ROOT_URLCONF = 'core.urls'
