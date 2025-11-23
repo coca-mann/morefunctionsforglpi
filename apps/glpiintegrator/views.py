@@ -2,9 +2,9 @@ import base64, hashlib, hmac, json, time
 from django.conf import settings
 from django.contrib.auth import login
 from django.contrib.auth.models import User
-from django.http import HttpResponse, HttpResponseForbidden
+from django.http import HttpResponseForbidden
 from django.shortcuts import redirect
-from django.db import transaction
+from django.urls import reverse
 from apps.glpiintegrator.models import GlpiProfile
 
 
@@ -67,7 +67,7 @@ def glpi_sso(request):
     # 6. Log the user in and redirect
     if user is not None and user.is_active:
         login(request, user)
-        next_url = request.GET.get('next', '/')
+        next_url = request.GET.get('next', reverse('admin:index'))
         return redirect(next_url)
     
     return HttpResponseForbidden("User account is inactive or could not be authenticated.")

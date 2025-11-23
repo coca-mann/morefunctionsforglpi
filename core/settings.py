@@ -242,3 +242,5 @@ CORS_ALLOWED_ORIGINS = [
 # IMPORTANTE: Em produção, esta opção deve ser False por segurança.
 # Ela força o Django a usar a lista 'CORS_ALLOWED_ORIGINS'.
 CORS_ALLOW_ALL_ORIGINS = False
+
+X_FRAME_OPTIONS = 'SAMEORIGIN'
