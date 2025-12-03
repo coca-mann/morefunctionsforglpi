@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Conferência - Laudo {{ laudo.numero_documento }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1.5cm;
+        }
+        body {
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            font-size: 10pt;
+            color: #333;
+        }
+        h2 {
+            font-family: 'Arial Black', 'Arial Bold', sans-serif;
+            font-size: 14pt;
+            color: #222;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 5px;
+            page-break-after: avoid;
+        }
+        .legenda-lista {
+            list-style-type: none;
+            padding-left: 0;
+            font-size: 9pt;
+            columns: 2;
+            column-gap: 20px;
+            margin-bottom: 20px;
+        }
+        .legenda-lista li {
+            margin-bottom: 5px;
+            page-break-inside: avoid;
+        }
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9pt;
+            margin-bottom: 20px;
+        }
+        .items-table th, .items-table td {
+            border: 1px solid #aaa;
+            padding: 6px;
+            text-align: left;
+            page-break-inside: avoid;
+        }
+        .items-table th {
+            background-color: #e0e0e0;
+            font-weight: bold;
+        }
+        .col-check {
+            width: 15%;
+        }
+        .info-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .info-header h1 {
+            font-size: 16pt;
+            margin: 0;
+        }
+        .info-header p {
+            font-size: 11pt;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="info-header">
+        <h1>Folha de Conferência</h1>
+        <p>Laudo Técnico de Baixa Patrimonial: <strong>{{ laudo.numero_documento }}</strong></p>
+        <p>Técnico: {{ laudo.tecnico_nome_completo }}</p>
+    </div>
+
+    <h2>Legenda de Motivos para Baixa</h2>
+    <ul class="legenda-lista">
+        {% for motivo in todos_motivos %}
+            <li><strong>{{ motivo.codigo }}:</strong> {{ motivo.titulo }}</li>
+        {% empty %}
+            <li>Nenhum motivo de baixa cadastrado.</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Itens para Conferência</h2>
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th>Equipamento</th>
+                <th>Nº de Série</th>
+                <th>Patrimônio</th>
+                <th class="col-check">Motivo (código)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in itens %}
+            <tr>
+                <td>{{ item.tipo_equipamento }} - {{ item.nome_equipamento }}</td>
+                <td>{{ item.numero_serie|default:"-" }}</td>
+                <td>{{ item.numero_patrimonio|default:"-" }}</td>
+                <td></td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4">Nenhum item encontrado para este laudo.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

@@ -116,7 +116,7 @@ class LaudoBaixaAdmin(admin.ModelAdmin):
         'get_tecnico_nome_completo', 
         'destinacao', 
         'get_item_count',
-        'link_imprimir_pdf'# Contagem de itens (método abaixo)
+        'link_imprimir_documento'
     )
     list_filter = ('data_laudo', 'tecnico_responsavel', 'destinacao')
     search_fields = ('numero_documento', 'tecnico_responsavel__username', 'itens__nome_equipamento')
@@ -168,33 +168,30 @@ class LaudoBaixaAdmin(admin.ModelAdmin):
         # Apenas chamamos a propriedade que já existe no models.py
         return obj.tecnico_nome_completo
     
-    def link_imprimir_pdf(self, obj):
+    def link_imprimir_documento(self, obj):
         """
-        Verifica as condições antes de mostrar o link de impressão.
-        Usa os valores pré-calculados do 'get_queryset'.
+        Verifica as condições e mostra o link apropriado:
+        - Folha de Conferência se os motivos estiverem pendentes.
+        - Laudo PDF final se tudo estiver preenchido.
         """
-        
-        # 1. Verifica técnico
+        # Condições que impedem qualquer impressão
         if not obj.tecnico_responsavel:
             return "Pendente (Técnico)"
-
-        # 2. Verifica destinação
         if not obj.destinacao:
             return "Pendente (Destinação)"
-        
-        # 3. Verifica se tem itens (usando a anotação)
         if obj._item_count == 0:
             return "Pendente (Sem itens)"
-            
-        # 4. Verifica se todos os itens têm motivo (usando a anotação)
+        
+        # Se há itens, mas alguns estão sem motivo -> Link de CONFERÊNCIA
         if obj._missing_motivos > 0:
-            return f"Pendente ({obj._missing_motivos} itens sem motivo)"
+            url = reverse('reports:gerar_pdf_conferencia_laudo', args=[obj.pk])
+            return mark_safe(f'<a href="{url}" target="_blank">Folha de Conferência</a>')
 
-        # Se todas as condições passarem:
+        # Se TUDO está preenchido -> Link do LAUDO FINAL
         url = reverse('reports:gerar_pdf_laudo_baixa', args=[obj.pk])
-        return mark_safe(f'<a href="{url}" target="_blank">Gerar PDF</a>')
+        return mark_safe(f'<a href="{url}" target="_blank">Gerar Laudo PDF</a>')
     
-    link_imprimir_pdf.short_description = "Imprimir Laudo"
+    link_imprimir_documento.short_description = "Imprimir Documento"
     
     @admin.display(description='Qtd. Itens', ordering='_item_count')
     def get_item_count(self, obj):

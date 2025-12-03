@@ -58,6 +58,48 @@ def gerar_pdf_laudo_baixa(request, laudo_id):
     return response
 
 
+def gerar_pdf_conferencia_laudo(request, laudo_id):
+    """
+    Gera uma folha de conferência para um Laudo de Baixa,
+    listando todos os itens e uma legenda de motivos.
+    """
+    try:
+        from weasyprint import HTML
+    except OSError:
+        return HttpResponse("Erro: WeasyPrint não está instalado corretamente. Dependências do GTK3 estão faltando.", status=500)
+
+    # 1. Buscar o laudo
+    laudo = get_object_or_404(LaudoBaixa, pk=laudo_id)
+    
+    # 2. Buscar os itens do laudo
+    itens = laudo.itens.all().order_by('nome_equipamento')
+    
+    # 3. Buscar TODOS os motivos de baixa para a legenda
+    todos_motivos = MotivoBaixa.objects.all().order_by('codigo')
+
+    # 4. Contexto para o template
+    contexto = {
+        'laudo': laudo,
+        'itens': itens,
+        'todos_motivos': todos_motivos,
+    }
+
+    # 5. Renderizar o HTML com o novo template
+    html_string = render_to_string(
+        'reports/relatorio_conferencia_laudo.html', 
+        contexto
+    )
+
+    # 6. Gerar o PDF
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf()
+
+    # 7. Retornar a resposta
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="conferencia_laudo_{laudo.numero_documento}.pdf"'
+    
+    return response
+
+
 def gerar_pdf_protocolo_reparo(request, protocolo_id):
     """
     Gera um PDF para um Protocolo de Envio para Reparo.

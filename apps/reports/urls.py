@@ -10,6 +10,11 @@ urlpatterns = [
         name='gerar_pdf_laudo_baixa'
     ),
     path(
+        'laudo/<int:laudo_id>/conferencia/pdf/',
+        views.gerar_pdf_conferencia_laudo,
+        name='gerar_pdf_conferencia_laudo'
+    ),
+    path(
         'protocolo/<int:protocolo_id>/pdf/', 
         views.gerar_pdf_protocolo_reparo, 
         name='gerar_pdf_protocolo_reparo'
