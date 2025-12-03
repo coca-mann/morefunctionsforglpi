@@ -430,7 +430,6 @@ def newpanel_dashboard_departmentteam():
      WHERE TU.users_id = U.id 
        AND TU.type = 2
        AND T.is_deleted = 0
-       AND T.status NOT IN (6)
     ) AS qtd_tickets_atribuidos,
     (SELECT COUNT(P.id)
      FROM glpi_projects P
