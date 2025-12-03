@@ -90,8 +90,8 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'apps.glpiintegrator.middleware.AllowAdminInIframeMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # 'apps.glpiintegrator.middleware.AllowAdminInIframeMiddleware', # Desativado para produção
 ]
 
 ROOT_URLCONF = 'core.urls'
