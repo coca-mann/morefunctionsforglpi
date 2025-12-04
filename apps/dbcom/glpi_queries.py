@@ -525,7 +525,7 @@ def newpanel_projects_data():
     GROUP BY 
         P.id
     ORDER BY 
-    data_entrega_vigente ASC;
+    data_entrega_vigente DESC, nome_projeto;
     """
     
     return db_glpi.fetch_query(sql)

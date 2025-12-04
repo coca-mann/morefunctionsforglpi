@@ -41,7 +41,7 @@
             </div>
             <!-- Status (Ícone) -->
             <div
-              class="w-3.5 h-3.5 rounded-full"
+              class="w-3.5 h-3.5 rounded-full flex-shrink-0"
               :style="{ backgroundColor: project.cor_estado }"
               :title="project.estado"
             ></div>
