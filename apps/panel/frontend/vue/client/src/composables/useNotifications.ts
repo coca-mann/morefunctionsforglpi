@@ -80,10 +80,12 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
     notifications.value.push(notification)
     lastNotificationTime.value = Date.now()
 
-    // Remove notificação após 5 segundos
+    // Remove notificação após 10 segundos
     setTimeout(() => {
-      notifications.value = notifications.value.filter(n => n !== notification)
-    }, 5000)
+      // Filter by unique ID to ensure correct removal
+      notifications.value = notifications.value.filter(n => n.data.id !== notification.data.id)
+      console.log(`[Notifications] Removed notification with ID: ${notification.data.id}`)
+    }, 10000) // Changed to 10000ms (10 seconds)
 
     console.log('[Notifications] Notificação adicionada:', notification.type)
   }
@@ -184,6 +186,14 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
     seenTicketIds.value.clear()
   }
 
+  const toggleSound = () => {
+    isSoundEnabled.value = !isSoundEnabled.value
+    console.log(`[Notifications] Sound toggled. Now: ${isSoundEnabled.value}`)
+    if (isSoundEnabled.value) {
+      playNotificationSound(true) // Play confirmation sound on enable
+    }
+  }
+
   // Ciclo de vida
   onMounted(() => {
     initializeAudio()
@@ -214,6 +224,7 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
     resetSeenTickets,
     handleNewTicketAlert,
     handleProjectUpdateAlert,
-    handleCriticalAlert
+    handleCriticalAlert,
+    toggleSound
   }
 }

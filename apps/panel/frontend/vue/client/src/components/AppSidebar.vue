@@ -44,16 +44,16 @@
       <button
         @click="toggleSound"
         class="w-14 h-14 rounded flex items-center justify-center transition-all group"
-        :class="soundEnabledLocal ? 'bg-slate-700 hover:bg-slate-600' : 'bg-slate-800 hover:bg-slate-700'"
-        :title="soundEnabledLocal ? 'Som ativado' : 'Som desativado'"
+        :class="soundEnabled ? 'bg-slate-700 hover:bg-slate-600' : 'bg-slate-800 hover:bg-slate-700'"
+        :title="soundEnabled ? 'Som ativado' : 'Som desativado'"
       >
-        <span class="material-icons text-xl" :class="soundEnabledLocal ? 'text-yellow-400' : 'text-slate-500'">
-          {{ soundEnabledLocal ? 'volume_up' : 'volume_off' }}
+        <span class="material-icons text-xl" :class="soundEnabled ? 'text-yellow-400' : 'text-slate-500'">
+          {{ soundEnabled ? 'volume_up' : 'volume_off' }}
         </span>
 
         <!-- Tooltip -->
         <div class="absolute left-full ml-2 px-3 py-2 bg-slate-800 text-slate-100 text-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-          {{ soundEnabledLocal ? 'Som ativado' : 'Som desativado' }}
+          {{ soundEnabled ? 'Som ativado' : 'Som desativado' }}
         </div>
       </button>
 
@@ -78,7 +78,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 
 interface MenuItem {
   id: string
@@ -98,7 +98,6 @@ const props = defineProps<{
   soundEnabled?: boolean
 }>()
 
-const soundEnabledLocal = ref(props.soundEnabled ?? false)
 const isDevelopment = import.meta.env.DEV
 
 const menuItems: MenuItem[] = [
@@ -126,7 +125,6 @@ const selectMenu = (id: string) => {
 }
 
 const toggleSound = () => {
-  soundEnabledLocal.value = !soundEnabledLocal.value
   emit('toggle-sound')
 }
 

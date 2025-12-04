@@ -1,7 +1,7 @@
 <template>
   <div class="flex h-screen bg-slate-900">
     <!-- Sidebar -->
-    <AppSidebar :activeMenu="activeScreen" :wsConnected="wsConnected" :soundEnabled="soundEnabled"
+    <AppSidebar :activeMenu="activeScreen" :wsConnected="wsConnected" :soundEnabled="isSoundEnabled"
       @select-menu="activeScreen = $event" @toggle-sound="toggleSound"
       @toggle-test-panel="showTestPanel = !showTestPanel" />
 
@@ -23,13 +23,13 @@
     <!-- Notifications Toast -->
     <div class="fixed top-24 right-4 space-y-2 z-30">
       <transition-group name="notification">
-        <div v-for="notification in notifications" :key="notification.id"
+        <div v-for="notification in notificationAlerts" :key="notification.data.id"
           class="bg-slate-800 border-l-4 border-red-500 p-4 rounded shadow-lg max-w-sm">
           <div class="flex items-start gap-3">
             <span class="material-icons text-red-500 flex-shrink-0">warning</span>
             <div>
-              <h4 class="font-bold text-slate-100">{{ notification.title }}</h4>
-              <p class="text-sm text-slate-400">{{ notification.description }}</p>
+              <h4 class="font-bold text-slate-100">{{ notification.data.title }}</h4>
+              <p class="text-sm text-slate-400">Prioridade: {{ notification.data.severity }}</p>
             </div>
           </div>
         </div>
@@ -38,7 +38,7 @@
 
     <!-- Test Panel -->
     <TestPanel v-if="showTestPanel" :visible="showTestPanel" :clientId="wsClientId" :clientIp="clientIp"
-      :connectionStatus="connectionStatus" :soundEnabled="soundEnabled" @close="showTestPanel = false"
+      :connectionStatus="connectionStatus" :soundEnabled="isSoundEnabled" @close="showTestPanel = false"
       @send-new-ticket="handleTestNewTicket" @send-project-update="handleTestProjectUpdate"
       @send-remote-command="handleTestRemoteCommand" @play-sound="handleTestPlaySound" />
   </div>
@@ -55,7 +55,7 @@ import DashboardView from './views/DashboardView.vue'
 import RemoteControlView from './views/RemoteControlView.vue'
 import { useWebSocket } from './composables/useWebSocket'
 import { useNotifications } from './composables/useNotifications'
-import type { NotificationAlert } from './types/dashboard'
+import type { NotificationAlert, WebSocketMessage, Ticket } from './types/dashboard'
 
 // WebSocket
 const {
@@ -63,7 +63,6 @@ const {
   connectionStatus,
   clientId: wsClientId,
   settings,
-  // clientIp, // Don't destructure directly to allow local override
   lastMessage,
   send: sendWebSocketMessage
 } = useWebSocket({
@@ -75,8 +74,14 @@ const {
   isSoundEnabled,
   processNotification,
   playNotificationSound,
-  setSoundUrl
+  setSoundUrl,
+  toggleSound: toggleNotificationSound,
+  notifications: notificationAlerts // Renamed to avoid conflict with local notifications ref
 } = useNotifications()
+
+const seenTicketIds = ref<Set<string | number>>(new Set());
+let isInitialTicketsLoad = true;
+
 
 // Watch for settings changes and update the sound URL
 watch(() => settings.value.notification_sound_url, (newUrl) => {
@@ -86,28 +91,67 @@ watch(() => settings.value.notification_sound_url, (newUrl) => {
   }
 }, { immediate: true })
 
-// Watch for screen change requests
-watch(() => lastMessage.value, (msg) => {
-  if (msg && msg.type === 'change_screen' && msg.screen) {
-    console.log(`[App] Changing screen to: ${msg.screen}`)
-    // Verify if screen exists
+// Watch for screen change requests and new tickets
+watch(lastMessage, (msg: WebSocketMessage | null) => {
+  if (!msg) return;
+
+  // Handle screen change
+  if (msg.type === 'change_screen' && msg.screen) {
+    console.log(`[App] Changing screen to: ${msg.screen}`);
     if (['dashboard', 'tickets', 'projects', 'remote'].includes(msg.screen)) {
-      activeScreen.value = msg.screen as any
+      activeScreen.value = msg.screen as any;
     }
   }
-})
+
+  // Handle new ticket detection
+  if (msg.type === 'tickets_update' && msg.data) {
+    // Ensure msg.data is treated as an array of Ticket objects
+    const incomingTickets = msg.data as Ticket[]; 
+    const incomingTicketIds = incomingTickets.map((t: Ticket) => String(t.id));
+
+    if (isInitialTicketsLoad) {
+      seenTicketIds.value = new Set(incomingTicketIds);
+      isInitialTicketsLoad = false;
+    } else {
+      let newTicketFound = false;
+      for (const ticketData of incomingTickets) { 
+        const ticketId = String(ticketData.id);
+        if (!seenTicketIds.value.has(ticketId)) {
+          // It's a new ticket, trigger alert and play sound
+          console.log('[App] New ticket detected. Playing sound and showing notification.');
+          playNotificationSound();
+
+          // Construct and process the notification alert
+          const newTicketAlert: NotificationAlert = {
+            type: 'new_ticket_alert',
+            data: {
+              id: ticketId,
+              title: ticketData.Titulo || `Ticket #${ticketId}`, // Use "Titulo" from backend data
+              severity: ticketData.Urgencia || 'medium', // Use "Urgencia" from backend data
+            },
+            timestamp: new Date().toISOString()
+          };
+          processNotification(newTicketAlert); // This adds to notificationAlerts ref
+
+          newTicketFound = true; // Only play sound once and show notification for the first new one
+          break; 
+        }
+      }
+      
+      // Always update seen tickets after processing the update to avoid repeated notifications
+      seenTicketIds.value = new Set(incomingTicketIds);
+    }
+  }
+});
+
 
 // Estado da aplicação
 const activeScreen = ref<'dashboard' | 'tickets' | 'projects' | 'remote'>('tickets')
-const soundEnabled = ref(true)
 const showTestPanel = ref(false)
-const notifications = ref<Array<{ id: string; title: string; description: string }>>([])
 const currentTime = ref<string>('00:00:00')
 const timezone = ref<string>('America/Porto_Velho')
 const clientIp = ref<string>('Detectando...')
 let timeInterval: ReturnType<typeof setInterval> | null = null
-
-// Removed local generateDisplayId as we use wsClientId from useWebSocket
 
 // Componentes de tela
 const viewComponents = {
@@ -140,35 +184,13 @@ const updateClock = () => {
   currentTime.value = `${hour}:${minute}:${second}`
 }
 
-// Removed detectClientIp function as we use WebSocket for this
-
 // Handlers para o painel de teste
 const handleTestNewTicket = async (data: NotificationAlert) => {
   await processNotification(data)
-
-  notifications.value.push({
-    id: String(data.data.id),
-    title: `Novo Ticket: ${data.data.title}`,
-    description: `Prioridade: ${data.data.severity}`
-  })
-
-  setTimeout(() => {
-    notifications.value = notifications.value.filter(n => n.id !== String(data.data.id))
-  }, 5000)
 }
 
 const handleTestProjectUpdate = async (data: NotificationAlert) => {
   await processNotification(data)
-
-  notifications.value.push({
-    id: String(data.data.id),
-    title: `Projeto Atualizado: ${data.data.title}`,
-    description: 'Progresso atualizado'
-  })
-
-  setTimeout(() => {
-    notifications.value = notifications.value.filter(n => n.id !== String(data.data.id))
-  }, 5000)
 }
 
 const handleTestRemoteCommand = (target: string) => {
@@ -183,10 +205,7 @@ const handleTestPlaySound = async (url: string) => {
 
 // Toggle de som
 const toggleSound = () => {
-  soundEnabled.value = !soundEnabled.value
-  if (soundEnabled.value) {
-    playNotificationSound(true)
-  }
+  toggleNotificationSound()
 }
 
 // Detectar IP local do cliente via WebRTC
