@@ -319,7 +319,7 @@ class ItemReparoInline(admin.TabularInline):
     )
     readonly_fields = fields # Todos os campos são somente leitura
     extra = 0
-    can_delete = False # Itens só são adicionados via ação
+    can_delete = True # Permite remover itens indesejados do protocolo
 
     def has_add_permission(self, request, obj):
         return False # Impede adição manual
