@@ -167,13 +167,14 @@
       <tr>
         <th style="width: 20px;"></th>
         <th data-key="asset_name">Nome do Ativo</th>
+        <th data-key="ref">Ref</th>
         <th data-key="entity">Entidade</th>
         <th data-key="asset_type">Tipo</th>
       </tr>
     </thead>
     <tbody id="results-body">
       <tr>
-        <td colspan="4" style="text-align: center; padding: 20px;">
+        <td colspan="5" style="text-align: center; padding: 20px;">
           Selecione um tipo de ativo acima.
         </td>
       </tr>
@@ -340,7 +341,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (searchTerm) {
                 message = `Nenhum item corresponde ao filtro "<b>${searchTerm}</b>".`;
             }
-            resultsBody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 20px;">${message}</td></tr>`;
+            resultsBody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 20px;">${message}</td></tr>`;
             return;
         }
         
@@ -348,10 +349,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const tr = document.createElement('tr');
             tr.dataset.titulo = asset.asset_name; 
             tr.dataset.url = asset.url;
+            tr.dataset.ref = asset.ref || '';
 
             tr.innerHTML = `
                 <td><input type="checkbox" class="asset-checkbox"></td>
                 <td>${asset.asset_name}</td>
+                <td>${asset.ref || ''}</td>
                 <td>${asset.entity}</td>
                 <td>${asset.asset_type}</td>
             `;
@@ -380,7 +383,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const tr = cb.closest('tr');
             selectedItems.push({
                 titulo: tr.dataset.titulo,
-                url: tr.dataset.url
+                url: tr.dataset.url,
+                ref: tr.dataset.ref
             });
         });
 

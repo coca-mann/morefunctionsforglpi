@@ -169,6 +169,8 @@ window.addEventListener('DOMContentLoaded', () => {
                 el.innerText = config.custom_text || '[Texto Fixo]';
             } else if (config.data_source === 'url') {
                 el.innerText = '[URL]';
+            } else if (config.data_source === 'ref') {
+                el.innerText = '[REF]';
             } else {
                 el.innerText = '[TÍTULO]';
             }

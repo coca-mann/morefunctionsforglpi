@@ -37,3 +37,4 @@ class EtiquetaParaImprimirSerializer(serializers.Serializer):
     """
     titulo = serializers.CharField(max_length=200, required=True)
     url = serializers.URLField(required=True)
+    ref = serializers.CharField(max_length=100, required=False, allow_blank=True, allow_null=True)

@@ -93,14 +93,16 @@ def get_assets_for_printing(asset_type: str):
         all_assets.asset_type,
         all_assets.entity,
         all_assets.asset_name,
-        all_assets.url
+        all_assets.url,
+        all_assets.ref
         FROM (
             -- Computadores
             (SELECT
                 'Computer' AS asset_type,
                 e.name AS entity,
                 c.name AS asset_name,
-                CONCAT('https://centraldeservicos.grupoapariciocarvalho.com.br/front/computer.form.php?id=', c.id) AS url
+                CONCAT('https://centraldeservicos.grupoapariciocarvalho.com.br/front/computer.form.php?id=', c.id) AS url,
+                '' AS ref
             FROM glpi_computers c
             LEFT JOIN glpi_entities e ON e.id = c.entities_id
             WHERE c.is_template = 0 AND c.is_deleted = 0)
@@ -110,7 +112,8 @@ def get_assets_for_printing(asset_type: str):
                 'Monitor' AS asset_type,
                 e.name AS entity,
                 m.name AS asset_name,
-                CONCAT('https://centraldeservicos.grupoapariciocarvalho.com.br/front/monitor.form.php?id=', m.id) AS url
+                CONCAT('https://centraldeservicos.grupoapariciocarvalho.com.br/front/monitor.form.php?id=', m.id) AS url,
+                '' AS ref
             FROM glpi_monitors m
             LEFT JOIN glpi_entities e ON e.id = m.entities_id
             WHERE m.is_template = 0 AND m.is_deleted = 0)
@@ -120,7 +123,8 @@ def get_assets_for_printing(asset_type: str):
                 'Printer' AS asset_type,
                 e.name AS entity,
                 p.name AS asset_name,
-                CONCAT('https://centraldeservicos.grupoapariciocarvalho.com.br/front/printer.form.php?id=', p.id) AS url
+                CONCAT('https://centraldeservicos.grupoapariciocarvalho.com.br/front/printer.form.php?id=', p.id) AS url,
+                '' AS ref
             FROM glpi_printers p
             LEFT JOIN glpi_entities e ON e.id = p.entities_id
             WHERE p.is_template = 0 AND p.is_deleted = 0)
@@ -130,7 +134,8 @@ def get_assets_for_printing(asset_type: str):
                 'Phone' AS asset_type,
                 e.name AS entity,
                 ph.name AS asset_name,
-                CONCAT('https://centraldeservicos.grupoapariciocarvalho.com.br/front/phone.form.php?id=', ph.id) AS url
+                CONCAT('https://centraldeservicos.grupoapariciocarvalho.com.br/front/phone.form.php?id=', ph.id) AS url,
+                '' AS ref
             FROM glpi_phones ph
             LEFT JOIN glpi_entities e ON e.id = ph.entities_id
             WHERE ph.is_template = 0 AND ph.is_deleted = 0)
@@ -140,7 +145,8 @@ def get_assets_for_printing(asset_type: str):
                 'Networkequipment' AS asset_type,
                 e.name AS entity,
                 n.name AS asset_name,
-                CONCAT('https://centraldeservicos.grupoapariciocarvalho.com.br/front/networkequipment.form.php?id=', n.id) AS url
+                CONCAT('https://centraldeservicos.grupoapariciocarvalho.com.br/front/networkequipment.form.php?id=', n.id) AS url,
+                '' AS ref
             FROM glpi_networkequipments n
             LEFT JOIN glpi_entities e ON e.id = n.entities_id
             WHERE n.is_template = 0 AND n.is_deleted = 0)
@@ -150,7 +156,8 @@ def get_assets_for_printing(asset_type: str):
                 'Rack' AS asset_type,
                 e.name AS entity,
                 r.name AS asset_name,
-                CONCAT('https://centraldeservicos.grupoapariciocarvalho.com.br/front/rack.form.php?id=', r.id) AS url
+                CONCAT('https://centraldeservicos.grupoapariciocarvalho.com.br/front/rack.form.php?id=', r.id) AS url,
+                '' AS ref
             FROM glpi_racks r
             LEFT JOIN glpi_entities e ON e.id = r.entities_id
             WHERE r.is_template = 0 AND r.is_deleted = 0)
@@ -159,17 +166,20 @@ def get_assets_for_printing(asset_type: str):
             (SELECT
                 'Consumableitem' AS asset_type,
                 e.name AS entity,
-                ci.name AS asset_name,
-                CONCAT('https://centraldeservicos.grupoapariciocarvalho.com.br/front/consumableitem.form.php?id=', ci.id) AS url
+                CONCAT(ci.name, ' - ', m.name ) AS asset_name,
+                CONCAT('https://centraldeservicos.grupoapariciocarvalho.com.br/front/consumableitem.form.php?id=', ci.id) AS url,
+                ci.ref AS ref
             FROM glpi_consumableitems ci
             LEFT JOIN glpi_entities e ON e.id = ci.entities_id
+            LEFT JOIN glpi_manufacturers m ON m.id = ci.manufacturers_id 
             WHERE ci.is_deleted = 0)
             UNION ALL
             -- Projetores
             SELECT 'Projetor' AS asset_type,
                 glpi_locations.name AS entity,
                 projetor.name AS asset_name,
-                CONCAT('https://centraldeservicos.grupoapariciocarvalho.com.br/front/asset/asset.form.php?class=projetor&id=', projetor.id) AS url FROM glpi_assets_assets projetor
+                CONCAT('https://centraldeservicos.grupoapariciocarvalho.com.br/front/asset/asset.form.php?class=projetor&id=', projetor.id) AS url,
+                '' AS ref FROM glpi_assets_assets projetor
             LEFT JOIN glpi_assets_assetdefinitions ON projetor.assets_assetdefinitions_id  = glpi_assets_assetdefinitions.id
             LEFT JOIN glpi_locations ON glpi_locations.id = projetor.locations_id 
             WHERE projetor.is_template = 0 and projetor.is_deleted = 0 AND glpi_assets_assetdefinitions.system_name = 'projetor'
@@ -178,7 +188,8 @@ def get_assets_for_printing(asset_type: str):
             SELECT 'Scanner' AS asset_type,
                 glpi_locations.name AS entity,
                 scanner.name AS asset_name,
-                CONCAT('https://centraldeservicos.grupoapariciocarvalho.com.br/front/asset/asset.form.php?class=scanner&id=', scanner.id) AS url FROM glpi_assets_assets scanner
+                CONCAT('https://centraldeservicos.grupoapariciocarvalho.com.br/front/asset/asset.form.php?class=scanner&id=', scanner.id) AS url,
+                '' AS ref FROM glpi_assets_assets scanner
             LEFT JOIN glpi_assets_assetdefinitions ON scanner.assets_assetdefinitions_id  = glpi_assets_assetdefinitions.id
             LEFT JOIN glpi_locations ON glpi_locations.id = scanner.locations_id 
             WHERE scanner.is_template = 0 and scanner.is_deleted = 0 AND glpi_assets_assetdefinitions.system_name = 'scanner'
@@ -187,7 +198,8 @@ def get_assets_for_printing(asset_type: str):
             SELECT 'Nobreak' AS asset_type,
                 glpi_locations.name AS entity,
                 nobreak.name AS asset_name,
-                CONCAT('https://centraldeservicos.grupoapariciocarvalho.com.br/front/asset/asset.form.php?class=nobreak&id=', nobreak.id) AS url FROM glpi_assets_assets nobreak
+                CONCAT('https://centraldeservicos.grupoapariciocarvalho.com.br/front/asset/asset.form.php?class=nobreak&id=', nobreak.id) AS url,
+                '' AS ref FROM glpi_assets_assets nobreak
             LEFT JOIN glpi_assets_assetdefinitions ON nobreak.assets_assetdefinitions_id  = glpi_assets_assetdefinitions.id
             LEFT JOIN glpi_locations ON glpi_locations.id = nobreak.locations_id 
             WHERE nobreak.is_template = 0 and nobreak.is_deleted = 0 AND glpi_assets_assetdefinitions.system_name = 'nobreak'
