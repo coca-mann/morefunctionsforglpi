@@ -25,15 +25,16 @@ class LaudoBaixaForm(forms.ModelForm):
         
         # 2. Agora, acesse o campo 'tecnico_responsavel'
         #    que o Django criou para nós
-        field = self.fields['tecnico_responsavel']
-        
-        # 3. Ajuste o queryset (opcional, mas recomendado)
-        field.queryset = User.objects.filter(
-            is_staff=True, is_active=True
-        ).order_by('first_name')
-        
-        # 4. APLIQUE A PROPRIEDADE NO LOCAL CORRETO
-        field.label_from_instance = lambda obj: obj.get_full_name()
+        if 'tecnico_responsavel' in self.fields:
+            field = self.fields['tecnico_responsavel']
+            
+            # 3. Ajuste o queryset (opcional, mas recomendado)
+            field.queryset = User.objects.filter(
+                is_staff=True, is_active=True
+            ).order_by('first_name')
+            
+            # 4. APLIQUE A PROPRIEDADE NO LOCAL CORRETO
+            field.label_from_instance = lambda obj: obj.get_full_name()
 
 
 class ProtocoloReparoForm(forms.ModelForm):
@@ -61,39 +62,41 @@ class ProtocoloReparoForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         
         # 2. Popula o dropdown de fornecedores
-        try:
-            # 1. Sua função retorna a lista de dicionários (ex: [{'id': 1, 'name': 'DELL'}])
-            fornecedores_glpi = get_fornecedores_glpi() 
-            
-            choices = [("", "---------")]
-            
-            # 2. Corrigimos o loop para iterar sobre a LISTA DE DICIONÁRIOS
-            for fornecedor_dict in fornecedores_glpi:
+        if 'glpi_fornecedor' in self.fields:
+            try:
+                # 1. Sua função retorna a lista de dicionários (ex: [{'id': 1, 'name': 'DELL'}])
+                fornecedores_glpi = get_fornecedores_glpi() 
                 
-                # 3. Acessamos os valores pelas CHAVES 'id' e 'name'
-                fid = fornecedor_dict.get('id')
-                fname = fornecedor_dict.get('name')
+                choices = [("", "---------")]
                 
-                if fid is not None and fname is not None:
-                    # 4. Criamos o 'choice' no formato "valor|label"
-                    choices.append((f"{fid}|{fname}", fname))
+                # 2. Corrigimos o loop para iterar sobre a LISTA DE DICIONÁRIOS
+                for fornecedor_dict in fornecedores_glpi:
+                    
+                    # 3. Acessamos os valores pelas CHAVES 'id' e 'name'
+                    fid = fornecedor_dict.get('id')
+                    fname = fornecedor_dict.get('name')
+                    
+                    if fid is not None and fname is not None:
+                        # 4. Criamos o 'choice' no formato "valor|label"
+                        choices.append((f"{fid}|{fname}", fname))
+                
+                self.fields['glpi_fornecedor'].choices = choices
             
-            self.fields['glpi_fornecedor'].choices = choices
-        
-        except Exception as e:
-            # Lida com erro de conexão com o GLPI
-            self.fields['glpi_fornecedor'].choices = [("", f"ERRO AO CARREGAR FORNECEDORES: {e}")]
+            except Exception as e:
+                # Lida com erro de conexão com o GLPI
+                self.fields['glpi_fornecedor'].choices = [("", f"ERRO AO CARREGAR FORNECEDORES: {e}")]
 
         # 3. Customiza o campo 'tecnico_responsavel' (igual ao LaudoBaixaForm)
-        field_tecnico = self.fields['tecnico_responsavel']
-        field_tecnico.queryset = User.objects.filter(
-            is_staff=True, is_active=True
-        ).order_by('first_name', 'last_name')
-        field_tecnico.label_from_instance = lambda obj: obj.get_full_name()
-        
+        if 'tecnico_responsavel' in self.fields:
+            field_tecnico = self.fields['tecnico_responsavel']
+            field_tecnico.queryset = User.objects.filter(
+                is_staff=True, is_active=True
+            ).order_by('first_name', 'last_name')
+            field_tecnico.label_from_instance = lambda obj: obj.get_full_name()
+            
         # 4. Se estiver editando um protocolo existente, 
         #    pré-seleciona o fornecedor correto no dropdown
-        if self.instance and self.instance.pk and self.instance.glpi_fornecedor_id:
+        if 'glpi_fornecedor' in self.fields and self.instance and self.instance.pk and self.instance.glpi_fornecedor_id:
             value_to_select = f"{self.instance.glpi_fornecedor_id}|{self.instance.glpi_fornecedor_nome}"
             self.fields['glpi_fornecedor'].initial = value_to_select
 

@@ -324,6 +324,11 @@ class ItemReparoInline(admin.TabularInline):
     def has_add_permission(self, request, obj):
         return False # Impede adição manual
     
+    def has_delete_permission(self, request, obj=None):
+        if obj and getattr(obj, 'status', None) == 'FINALIZED':
+            return False
+        return True
+
     @admin.display(description="Tipo")
     def tipo_equipamento_formatado(self, obj):
         # Formata "Glpi\CustomAsset\nobreakAsset" para "Nobreak"
@@ -342,14 +347,46 @@ class ProtocoloReparoAdmin(admin.ModelAdmin):
     inlines = [ItemReparoInline] # Mostra os itens dentro do protocolo
     
     list_display = (
-        'numero_documento', 'data_protocolo', 'get_tecnico_nome_completo', 
+        'numero_documento', 'status', 'data_protocolo', 'get_tecnico_nome_completo', 
         'glpi_fornecedor_nome', 'get_item_count', 'link_imprimir_pdf'
     )
-    list_filter = ('data_protocolo', 'tecnico_responsavel', 'glpi_fornecedor_nome')
+    list_filter = ('status', 'data_protocolo', 'tecnico_responsavel', 'glpi_fornecedor_nome')
     search_fields = ('numero_documento', 'glpi_fornecedor_nome', 'itens__nome_item')
-    readonly_fields = ('numero_documento',)
+    readonly_fields = ('numero_documento', 'status', 'finalizar_documento_button')
     
     actions = ['importar_chamados_glpi']
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj and obj.status == 'FINALIZADO':
+             # Retorna todos os campos como readonly
+             # self.model._meta.fields retorna objetos Field, precisamos dos nomes
+             campos = [f.name for f in self.model._meta.fields] 
+             # Adiciona os campos customizados/properties
+             return campos + ['finalizar_documento_button', 'status', 'numero_documento']
+        return self.readonly_fields
+
+    def has_delete_permission(self, request, obj=None):
+        if obj and obj.status == 'FINALIZADO':
+            return False
+        return super().has_delete_permission(request, obj)
+
+    @admin.display(description="Ações")
+    def finalizar_documento_button(self, obj):
+        if obj and obj.pk and obj.status == 'RASCUNHO':
+            return mark_safe(
+                f'<input type="submit" name="_finalizar" value="Finalizar Documento" '
+                f'class="default" style="background-color: #ba2121; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer;" '
+                f'onclick="return confirm(\'Tem certeza que deseja finalizar? Essa ação é IRREVERSÍVEL e impedirá qualquer alteração futura.\');">'
+            )
+        return "Documento Finalizado" if obj and obj.status == 'FINALIZADO' else "-"
+
+    def response_change(self, request, obj):
+        if "_finalizar" in request.POST:
+            if obj.status == 'RASCUNHO':
+                obj.finalizar_documento()
+                self.message_user(request, "Protocolo finalizado com sucesso.", messages.SUCCESS)
+            return HttpResponseRedirect(".")
+        return super().response_change(request, obj)
 
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
@@ -386,6 +423,10 @@ class ProtocoloReparoAdmin(admin.ModelAdmin):
             self.message_user(request, "Selecione apenas UM protocolo.", messages.ERROR)
             return
         protocolo = queryset.first()
+
+        if protocolo.status == 'FINALIZED':
+            self.message_user(request, f"O Protocolo {protocolo.numero_documento} está FINALIZADO e não pode receber novos itens.", messages.ERROR)
+            return
 
         if not protocolo.glpi_fornecedor_id:
             self.message_user(request, f"Selecione um Fornecedor no protocolo {protocolo.numero_documento}.", messages.ERROR)
@@ -498,7 +539,7 @@ class ProtocoloReparoAdmin(admin.ModelAdmin):
 
     def get_form(self, request, obj=None, **kwargs):
         # Garante a ordem dos campos no form de edição
-        self.fields = ('numero_documento', 'data_protocolo', 'tecnico_responsavel', 'glpi_fornecedor')
+        self.fields = ('numero_documento', 'status', 'finalizar_documento_button', 'data_protocolo', 'tecnico_responsavel', 'glpi_fornecedor')
         return super(ProtocoloReparoAdmin, self).get_form(request, obj, **kwargs)
 
     def has_module_permission(self, request):

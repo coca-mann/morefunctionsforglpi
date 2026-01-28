@@ -211,12 +211,24 @@ class ProtocoloReparo(models.Model):
     """
     O registro "pai" do Protocolo de Envio para Reparo.
     """
+    STATUS_CHOICES = [
+        ('RASCUNHO', 'Rascunho'),
+        ('FINALIZADO', 'Finalizado'),
+    ]
+
     numero_documento = models.CharField(
         "Nº do Documento",
         max_length=20,
         unique=True,
         editable=False,
         help_text="Gerado automaticamente ao salvar. Ex: PRE-2025-001"
+    )
+    status = models.CharField(
+        "Status",
+        max_length=15,
+        choices=STATUS_CHOICES,
+        default='RASCUNHO',
+        editable=False
     )
     data_protocolo = models.DateField(
         "Data do Protocolo",
@@ -246,7 +258,25 @@ class ProtocoloReparo(models.Model):
     def __str__(self):
         return f"{self.numero_documento} - {self.glpi_fornecedor_nome or 'N/A'}"
 
+    def finalizar_documento(self):
+        """
+        Finaliza o documento, impedindo futuras alterações.
+        """
+        self.status = 'FINALIZADO'
+        self.save()
+
+    def delete(self, *args, **kwargs):
+        if self.status == 'FINALIZADO':
+            raise ValidationError("Não é possível excluir um protocolo finalizado.")
+        super().delete(*args, **kwargs)
+
     def save(self, *args, **kwargs):
+        # Verifica se está tentando editar um documento JÁ finalizado
+        if self.pk:
+            old = ProtocoloReparo.objects.filter(pk=self.pk).first()
+            if old and old.status == 'FINALIZADO':
+                 raise ValidationError("Este protocolo já foi finalizado e não pode ser alterado.")
+
         # Lógica para gerar o número do documento automático
         if not self.pk:
             ano_atual = timezone.now().year
@@ -309,6 +339,16 @@ class ItemReparo(models.Model):
 
     def __str__(self):
         return self.nome_item
+
+    def save(self, *args, **kwargs):
+        if self.protocolo.status == 'FINALIZADO':
+            raise ValidationError("Protocolo finalizado: não é possível adicionar/editar itens.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        if self.protocolo.status == 'FINALIZADO':
+            raise ValidationError("Protocolo finalizado: não é possível remover itens.")
+        super().delete(*args, **kwargs)
 
     @property
     def tipo_equipamento_formatado(self):
