@@ -325,7 +325,7 @@ class ItemReparoInline(admin.TabularInline):
         return False # Impede adição manual
     
     def has_delete_permission(self, request, obj=None):
-        if obj and getattr(obj, 'status', None) == 'FINALIZED':
+        if obj and getattr(obj, 'status', None) == 'FINALIZADO':
             return False
         return True
 
@@ -432,7 +432,7 @@ class ProtocoloReparoAdmin(admin.ModelAdmin):
             return
         protocolo = queryset.first()
 
-        if protocolo.status == 'FINALIZED':
+        if protocolo.status == 'FINALIZADO':
             self.message_user(request, f"O Protocolo {protocolo.numero_documento} está FINALIZADO e não pode receber novos itens.", messages.ERROR)
             return
 
