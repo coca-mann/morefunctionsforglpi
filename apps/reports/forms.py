@@ -96,9 +96,14 @@ class ProtocoloReparoForm(forms.ModelForm):
             
         # 4. Se estiver editando um protocolo existente, 
         #    pré-seleciona o fornecedor correto no dropdown
-        if 'glpi_fornecedor' in self.fields and self.instance and self.instance.pk and self.instance.glpi_fornecedor_id:
-            value_to_select = f"{self.instance.glpi_fornecedor_id}|{self.instance.glpi_fornecedor_nome}"
-            self.fields['glpi_fornecedor'].initial = value_to_select
+        if 'glpi_fornecedor' in self.fields and self.instance and self.instance.pk:
+            if self.instance.glpi_fornecedor_id:
+                value_to_select = f"{self.instance.glpi_fornecedor_id}|{self.instance.glpi_fornecedor_nome}"
+                self.fields['glpi_fornecedor'].initial = value_to_select
+            
+            # SE estiver finalizado, desabilita o campo no nível do widget também
+            if getattr(self.instance, 'status', None) == 'FINALIZADO':
+                self.fields['glpi_fornecedor'].disabled = True
 
     def save(self, commit=True):
         # 5. Sobrescreve o 'save' para pegar o valor do campo 'falso'

@@ -361,9 +361,17 @@ class ProtocoloReparoAdmin(admin.ModelAdmin):
              # Retorna todos os campos como readonly
              # self.model._meta.fields retorna objetos Field, precisamos dos nomes
              campos = [f.name for f in self.model._meta.fields] 
-             # Adiciona os campos customizados/properties
-             return campos + ['finalizar_documento_button', 'status', 'numero_documento']
+             # Adiciona os campos customizados/properties e o campo do FORM (agora via método display)
+             return campos + ['finalizar_documento_button', 'status', 'numero_documento', 'get_glpi_fornecedor_display']
         return self.readonly_fields
+
+    @admin.display(description="Fornecedor (GLPI)")
+    def get_glpi_fornecedor_display(self, obj):
+        """
+        Exibe o nome do fornecedor quando o campo do formulário 
+        não estiver mais disponível (modo somente leitura).
+        """
+        return obj.glpi_fornecedor_nome or "-"
 
     def has_delete_permission(self, request, obj=None):
         if obj and obj.status == 'FINALIZADO':
@@ -537,9 +545,26 @@ class ProtocoloReparoAdmin(admin.ModelAdmin):
                 self.message_user(request, "Encerrando sessão da API.", messages.INFO)
                 kill_legacy_session(config, session_token)
 
+    def get_fieldsets(self, request, obj=None):
+        if obj and getattr(obj, 'status', None) == 'FINALIZADO':
+            return (
+                (None, {
+                    'fields': ('numero_documento', 'status', 'finalizar_documento_button', 'data_protocolo', 'tecnico_responsavel', 'get_glpi_fornecedor_display')
+                }),
+            )
+        return (
+            (None, {
+                'fields': ('numero_documento', 'status', 'finalizar_documento_button', 'data_protocolo', 'tecnico_responsavel', 'glpi_fornecedor')
+            }),
+        )
+
     def get_form(self, request, obj=None, **kwargs):
         # Garante a ordem dos campos no form de edição
-        self.fields = ('numero_documento', 'status', 'finalizar_documento_button', 'data_protocolo', 'tecnico_responsavel', 'glpi_fornecedor')
+        if obj and getattr(obj, 'status', None) == 'FINALIZADO':
+            # Remove o campo do form e o display method da lista de campos EDITÁVEIS/FORM
+            self.fields = ('numero_documento', 'status', 'finalizar_documento_button', 'data_protocolo', 'tecnico_responsavel')
+        else:
+            self.fields = ('numero_documento', 'status', 'finalizar_documento_button', 'data_protocolo', 'tecnico_responsavel', 'glpi_fornecedor')
         return super(ProtocoloReparoAdmin, self).get_form(request, obj, **kwargs)
 
     def has_module_permission(self, request):
