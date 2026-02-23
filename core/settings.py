@@ -34,11 +34,14 @@ DEBUG = os.getenv('DEBUG')
 ALLOWED_HOSTS = ['*']
 
 # Permissões para ambiente de desenvolvimento do Juliao
-CSRF_TRUSTED_ORIGINS = ['https://morefunctionsforglpi.luffyslair.tec.br']
+csrf_trusted = os.getenv('CSRF_TRUSTED_ORIGINS', 'https://morefunctionsforglpi.luffyslair.tec.br')
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in csrf_trusted.split(',')]
+
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 
 BASE_URL = os.getenv('BASE_URL')
+CSP_FRAME_ANCESTORS = os.getenv('CSP_FRAME_ANCESTORS', "'self'")
 
 
 # Application definition
@@ -91,7 +94,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # 'apps.glpiintegrator.middleware.AllowAdminInIframeMiddleware', # Desativado para produção
+    'apps.glpiintegrator.middleware.AllowAdminInIframeMiddleware', # Habilitado para permitir iframe do GLPI
 ]
 
 ROOT_URLCONF = 'core.urls'
@@ -229,19 +232,15 @@ SIMPLE_JWT = {
 
 # Configuração de CORS para permitir que o frontend acesse a API.
 # É uma lista de "origens" (protocolo + domínio + porta) que têm permissão.
-CORS_ALLOWED_ORIGINS = [
-    # Ambiente de desenvolvimento (Vite dev server)
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "https://morefunctionsforglpi.luffyslair.tec.br"
-
-    # Ambiente de produção (onde o Nginx está servindo o frontend)
-    "http://172.16.0.250",
-    "http://172.16.0.250/painel/",
-]
+cors_allowed = os.getenv('CORS_ALLOWED_ORIGINS', '')
+CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_allowed.split(',') if origin.strip()]
 
 # IMPORTANTE: Em produção, esta opção deve ser False por segurança.
 # Ela força o Django a usar a lista 'CORS_ALLOWED_ORIGINS'.
-CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL_ORIGINS', 'False').lower() == 'true'
 
-X_FRAME_OPTIONS = 'SAMEORIGIN'
+# Configurações para permitir cookies dentro do iframe (cross-subdomain)
+SESSION_COOKIE_SAMESITE = 'None'
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SAMESITE = 'None'
+CSRF_COOKIE_SECURE = True
