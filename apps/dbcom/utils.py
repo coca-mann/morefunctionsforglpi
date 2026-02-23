@@ -2,6 +2,43 @@ import requests
 import json
 
 
+from django.contrib.auth.models import Group
+from .glpi_queries import get_user_profiles_glpi
+
+def sync_glpi_user_groups(user):
+    """
+    Sincroniza os grupos do Django do usuário com os perfis dele no GLPI.
+    Garante que o usuário tenha acesso is_staff para visualizar o Django.
+    """
+    # 1. Tenta pegar o ID do GLPI vinculado ao usuário via SSO
+    try:
+        # Pega do modelo GlpiProfile (definido em apps.glpiintegrator.models)
+        glpi_id = user.glpi_profile.glpi_id
+    except Exception:
+        # Se não houver GlpiProfile, não conseguimos buscar no banco do GLPI
+        print(f"[SYNC] Usuário {user.username} não possui GlpiProfile vinculado. Pulando.")
+        return
+
+    # 2. Busca perfis no GLPI usando o ID real do usuário
+    glpi_profiles = get_user_profiles_glpi(glpi_id)
+    
+    if not glpi_profiles:
+        print(f"[SYNC] Nenhum perfil GLPI encontrado para ID {glpi_id}.")
+        return
+
+    print(f"[SYNC] Sincronizando {len(glpi_profiles)} perfis para {user.username}: {glpi_profiles}")
+
+    # 3. Garante que os grupos existam no Django e sincroniza
+    new_groups = [Group.objects.get_or_create(name=name)[0] for name in glpi_profiles]
+    user.groups.set(new_groups)
+    
+    # 4. GARANTIA: Todo usuário que acessa via GLPI precisa ser Staff para ver o Django
+    if not user.is_staff:
+        user.is_staff = True
+        user.save()
+        print(f"[SYNC] Acesso Staff concedido automaticamente para {user.username}")
+
+
 def get_legacy_session_token(config):
     """
     Inicia uma sessão na API Legada (v1) usando

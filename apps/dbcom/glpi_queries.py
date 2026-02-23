@@ -497,6 +497,30 @@ def newpanel_dashboard_departmentteam():
     return db_glpi.fetch_query(sql)
 
 
+def get_user_profiles_glpi(glpi_user_id: int):
+    """
+    Busca os nomes dos perfis de um usuário no GLPI baseado no ID único do usuário.
+    """
+    if not db_glpi:
+        return []
+
+    sql = """
+        SELECT gp.name 
+        FROM glpi_profiles_users gpu 
+        LEFT JOIN glpi_profiles gp ON gp.id = gpu.profiles_id
+        WHERE gpu.users_id = %s
+    """
+    params = (glpi_user_id,)
+    
+    try:
+        results = db_glpi.fetch_query(sql, params)
+        # Retorna apenas uma lista de strings com os nomes dos perfis
+        return [row['name'] for row in results] if results else []
+    except Exception as e:
+        print(f"[DEBUG] Erro ao buscar perfis do GLPI ID {glpi_user_id}: {e}")
+        return []
+
+
 def newpanel_projects_data():
     if not db_glpi:
         return []
