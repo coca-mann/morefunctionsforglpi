@@ -1,4 +1,4 @@
-import base64, hashlib, hmac, json, time
+import base64, hashlib, hmac, json, time, secrets
 from django.conf import settings
 from django.contrib.auth import login
 from django.contrib.auth.models import User
@@ -57,7 +57,9 @@ def glpi_sso(request):
         )
         
         if created:
-            user.set_password(User.make_random_password(length=24))
+            # Em Django 5.x, make_random_password foi removido.
+            # Usamos secrets para gerar uma senha segura e aleatória.
+            user.set_password(secrets.token_urlsafe(32))
             user.save()
         
         GlpiProfile.objects.create(user=user, glpi_id=glpi_user_id)
