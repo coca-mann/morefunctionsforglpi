@@ -9,6 +9,9 @@ from rest_framework_simplejwt.views import (
     TokenVerifyView,
 )
 
+# Desativa o link "Ver o site" no topo do Django Admin
+admin.site.site_url = None
+
 urlpatterns = [
     path('admin/impressao-etiquetas/', dbcom_views.impressao_etiquetas_view, name='admin_impressao_etiquetas'),
     path('api/get-assets/', dbcom_views.get_assets_data_api, name='api_get_assets'),
