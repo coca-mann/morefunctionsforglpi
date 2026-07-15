@@ -128,6 +128,8 @@
 
 {% block content %}
 
+{% csrf_token %}
+
 <p>Selecione um tipo de ativo para carregar os itens. Em seguida, selecione os itens que deseja imprimir.</p>
 
 <div class="asset-filters">
@@ -213,9 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Funções ---
     function getCsrfToken() {
-        return document.cookie.split('; ')
-            .find(row => row.startsWith('csrftoken='))
-            ?.split('=')[1];
+        return document.querySelector('input[name="csrfmiddlewaretoken"]').value;
     }
 
     async function fetchLayouts() {
