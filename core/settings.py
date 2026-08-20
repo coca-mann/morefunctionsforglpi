@@ -14,6 +14,8 @@ import os
 from dotenv import load_dotenv
 from pathlib import Path
 from datetime import timedelta
+from django.urls import reverse_lazy
+from django.utils.translation import gettext_lazy as _
 
 load_dotenv()
 
@@ -249,5 +251,127 @@ CSRF_COOKIE_SECURE = True
 # Tema do Django Admin (django-unfold)
 UNFOLD = {
     "SITE_TITLE": "MoreFunctionsForGLPI",
-    "SITE_HEADER": "MoreFunctionsForGLPI",
+    "SITE_HEADER": "Mais Funções do GLPI",
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": False,
+        "navigation": [
+            {
+                "title": _("Início"),
+                "separator": False,
+                "items": [
+                    {
+                        "title": _("Dashboard"),
+                        "icon": "dashboard",
+                        "link": reverse_lazy("admin:index"),
+                    },
+                ],
+            },
+            {
+                "title": _("Integração GLPI"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Conexões de Banco"),
+                        "icon": "database",
+                        "link": reverse_lazy("admin:dbcom_externaldbconfig_changelist"),
+                    },
+                    {
+                        "title": _("Configuração da API GLPI"),
+                        "icon": "settings",
+                        "link": reverse_lazy("admin:dbcom_glpiconfig_changelist"),
+                    },
+                    {
+                        "title": _("Webhooks e Automação"),
+                        "icon": "webhook",
+                        "link": reverse_lazy("admin:dbcom_glpiwebhook_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("Painel NOC"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Configurações do Dashboard"),
+                        "icon": "tune",
+                        "link": reverse_lazy("admin:panel_dashboardsettings_changelist"),
+                    },
+                    {
+                        "title": _("Displays Conectados"),
+                        "icon": "desktop_windows",
+                        "link": reverse_lazy("admin:panel_display_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("Impressão de Etiquetas"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Imprimir Etiquetas"),
+                        "icon": "qr_code_2",
+                        "link": reverse_lazy("admin_impressao_etiquetas"),
+                    },
+                    {
+                        "title": _("Servidores de Impressão"),
+                        "icon": "print",
+                        "link": reverse_lazy("admin:printer_printserver_changelist"),
+                    },
+                    {
+                        "title": _("Layouts de Etiqueta"),
+                        "icon": "label",
+                        "link": reverse_lazy("admin:printer_etiquetalayout_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("Laudos e Protocolos"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Laudos de Baixa"),
+                        "icon": "inventory_2",
+                        "link": reverse_lazy("admin:reports_laudobaixa_changelist"),
+                    },
+                    {
+                        "title": _("Motivos de Baixa"),
+                        "icon": "list_alt",
+                        "link": reverse_lazy("admin:reports_motivobaixa_changelist"),
+                    },
+                    {
+                        "title": _("Protocolos de Reparo"),
+                        "icon": "handyman",
+                        "link": reverse_lazy("admin:reports_protocoloreparo_changelist"),
+                    },
+                    {
+                        "title": _("Cabeçalho dos Documentos"),
+                        "icon": "description",
+                        "link": reverse_lazy("admin:reports_configuracaocabecalho_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("Administração"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Usuários"),
+                        "icon": "person",
+                        "link": reverse_lazy("admin:auth_user_changelist"),
+                    },
+                    {
+                        "title": _("Grupos"),
+                        "icon": "group",
+                        "link": reverse_lazy("admin:auth_group_changelist"),
+                    },
+                ],
+            },
+        ],
+    },
 }
