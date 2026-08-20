@@ -63,6 +63,12 @@ class GLPIConfig(models.Model):
         max_length=100, 
         help_text="Token Pessoal de Acesso (User-Token) de um usuário com permissão."
     )
+    glpi_status_baixa_id = models.PositiveIntegerField(
+        "ID do Status de Baixa (GLPI)",
+        null=True,
+        blank=True,
+        help_text="O ID do status no GLPI que será aplicado aos itens deste laudo (ex: status 'Baixado' ou 'Inativo')."
+    )
 
     # ... (o resto do seu modelo Singleton, com save(), delete() e __str__()) ...
     def __str__(self):

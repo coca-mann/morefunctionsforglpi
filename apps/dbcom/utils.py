@@ -106,6 +106,55 @@ def kill_legacy_session(config, session_token):
         print(f"Erro (não crítico) ao encerrar sessão: {e}")
         pass
 
+def update_glpi_asset_status(config, session_token, itemtype, item_id, status_id):
+    """
+    Atualiza o status (states_id) de um ativo específico no GLPI.
+    URL: apirest.php/:itemtype/:id
+    """
+    url = f"{config.glpi_api_url.rstrip('/')}/{itemtype}/{item_id}"
+    headers = {
+        "Content-Type": "application/json",
+        "App-Token": config.glpi_app_token,
+        "Session-Token": session_token
+    }
+    payload = {
+        "input": {
+            "states_id": status_id
+        }
+    }
+    
+    try:
+        # Tenta PATCH primeiro (comum em APIs REST modernas)
+        response = requests.patch(url, headers=headers, json=payload)
+        
+        # Se 405 (Method Not Allowed) ou 400 (dependendo da versão do GLPI), tenta PUT
+        if response.status_code in [400, 405]:
+            response = requests.put(url, headers=headers, json=payload)
+        
+        response.raise_for_status()
+        return True, None
+    except requests.exceptions.RequestException as e:
+        error_msg = e.response.text if e.response else str(e)
+        return False, error_msg
+
+def map_django_type_to_glpi(django_type):
+    """
+    Mapeia os nomes amigáveis de tipos de equipamentos do Django
+    para os 'itemtypes' internos do GLPI.
+    """
+    mapping = {
+        'Computador': 'Computer',
+        'Monitor': 'Monitor',
+        'Impressora': 'Printer',
+        'Equipamento de Rede': 'NetworkEquipment',
+        'Periférico': 'Peripheral',
+        'Telefone': 'Phone',
+        'Nobreak': 'UninterruptiblePowerSupply', # Comum no GLPI
+        'Acessório': 'Peripheral', # Ajuste conforme necessário
+    }
+    # Retorna o mapeamento ou o próprio tipo se não encontrar (caso já esteja no padrão GLPI)
+    return mapping.get(django_type, django_type)
+
 # --- FUNÇÃO PRINCIPAL ATUALIZADA ---
 def change_glpi_items_status(ticket_id, new_status_id, config): # <-- REMOVIDO check_previous_status_id
     """

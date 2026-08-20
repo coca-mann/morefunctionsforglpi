@@ -127,6 +127,7 @@ class GLPIConfigAdmin(admin.ModelAdmin):
                 'glpi_api_url', 
                 'glpi_app_token', 
                 'glpi_user_token', 
+                'glpi_status_baixa_id',
             )
         }),
     )
