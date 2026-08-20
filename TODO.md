@@ -26,18 +26,21 @@ a partir daqui.
   achou vários achados novos ao mapear as funcionalidades. **Mantido só
   localmente** (`docs/features.md`, gitignored, mesmo motivo do item 2).
 
-- [ ] **4. Resolver migrations fora do `.gitignore` sem quebrar produção**
-  Hoje `migrations/` está no `.gitignore` de cada app, forçando
-  `makemigrations`/estado não versionado direto em produção.
-  **Risco a investigar antes de mexer em código**: produção já roda com
-  um schema aplicado sem histórico de migration versionado no repo — se
-  as migrations que existem localmente não baterem exatamente com o
-  schema real de produção, o próximo `migrate` em prod pode tentar
-  aplicar operações redundantes ou conflitantes. Precisa de um
-  levantamento do schema real de produção (`mysqldump --no-data` ou
-  equivalente) comparado ao que as migrations locais gerariam, antes de
-  decidir a estratégia (ex: `--fake-initial`, squashing, ou recriar o
-  histórico de migrations do zero por app).
+- [x] **4. Resolver migrations fora do `.gitignore` sem quebrar produção**
+  `migrations/` tirado do `.gitignore`; arquivos do dev local adotados
+  como histórico canônico e versionados (commit `ef4dd4d`, PR #2). Cada
+  ambiente já implantado tinha gerado seu próprio histórico de migration
+  divergente (nomes/fatiamento diferentes, mesmo schema final — confirmado
+  via `makemigrations --check --dry-run` limpo em cada um). Reconciliado
+  no servidor de testes doméstico via `migrate <app> --fake` por app, após
+  remover os arquivos órfãos não-rastreados que coexistiam com os
+  canônicos pós-`git pull` (`dbcom`/`reports` tinham 1 cada). `glpiintegrator`
+  é um caso à parte: a pasta de migrations tinha sumido de vez (schema
+  intacto no banco, provável `git clean` em algum momento) — reconciliado
+  do mesmo jeito. **Falta repetir este procedimento na produção real da
+  empresa quando ela for atualizada** — não assumir que é igual ao servidor
+  de testes, refazer o levantamento (`showmigrations` + `makemigrations
+  --check`) lá antes de decidir fake vs. migrate real.
 
 - [x] **5. Criar infraestrutura de changelog e Pull Request**
   `CHANGELOG.md` e `docs/versioning.md` preenchidos; comandos globais
