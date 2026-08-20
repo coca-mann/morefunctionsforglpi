@@ -17,7 +17,6 @@ cryptography==46.0.4
 cssselect2==0.8.0
 daphne==4.2.1
 Django==6.1
-django-allauth==65.19.1
 django-cors-headers==4.9.0
 djangorestframework==3.18.0
 djangorestframework_simplejwt==5.5.1

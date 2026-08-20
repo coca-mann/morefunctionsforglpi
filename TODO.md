@@ -90,11 +90,9 @@ a partir daqui.
   - `Django` 6.0.1 → 6.1 (estável, mesma major — checar notas de
     depreciação antes de trocar)
   - `djangorestframework` 3.16.1 → 3.18.0
-  - `django-allauth` 65.14.0 → 65.19.1 — **achado à parte**: esta
-    dependência está no `requirements.txt` mas não é usada em lugar
-    nenhum (não está em `INSTALLED_APPS`, não é importada por nenhum
-    app). Decidir se atualiza mesmo assim ou remove — não bloqueia o
-    Unfold.
+  - `django-allauth` — **achado à parte**: estava no `requirements.txt`
+    mas não era usada em lugar nenhum (não estava em `INSTALLED_APPS`,
+    não era importada por nenhum app). Removida (commit seguinte).
   - `django-cors-headers`, `djangorestframework_simplejwt`, `channels`,
     `channels_redis`: já na versão mais recente, nada a fazer.
   - Depois do bump: `python manage.py check` + teste manual dos fluxos
