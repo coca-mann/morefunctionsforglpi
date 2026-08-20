@@ -1,11 +1,99 @@
+/* Paleta própria do editor, independente das variáveis do tema do admin
+   (o Unfold usa Tailwind com build fixo, então classes utilitárias
+   arbitrárias não têm efeito aqui — o editor define suas próprias cores
+   e reage ao dark mode via a classe "dark" no <html>, que é como o
+   Unfold sinaliza o tema escuro). A cor de destaque usa a mesma cor
+   primária do tema (UNFOLD["COLORS"]["primary"] no settings.py). */
+:root {
+    --le-bg: #ffffff;
+    --le-bg-muted: #f3f4f6;
+    --le-border: #d1d5db;
+    --le-text: #111827;
+    --le-text-muted: #6b7280;
+    --le-accent: var(--color-primary-500);
+    --le-error: #dc2626;
+    --le-btn-bg: #e5e7eb;
+    --le-btn-border: #9ca3af;
+}
+html.dark {
+    --le-bg: #1f2937;
+    --le-bg-muted: #111827;
+    --le-border: #374151;
+    --le-text: #f3f4f6;
+    --le-text-muted: #9ca3af;
+    --le-accent: var(--color-primary-500);
+    --le-error: #f87171;
+    --le-btn-bg: #3f4a5c;
+    --le-btn-border: #6b7280;
+}
+
 /* Container principal do editor */
 .editor-container {
     display: flex;
     flex-wrap: wrap;
     gap: 20px;
-    background: var(--module-bg);
+    background: var(--le-bg-muted);
     padding: 20px;
-    border-radius: 4px;
+    border-radius: 8px;
+    color: var(--le-text);
+}
+
+.editor-container h2,
+.editor-container h3 {
+    color: var(--le-text);
+}
+
+/* Caixas de controle (Adicionar Elemento / Propriedades) */
+.editor-controls .module {
+    background: var(--le-bg);
+    border: 1px solid var(--le-border);
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 15px;
+}
+
+.editor-controls label {
+    color: var(--le-text);
+}
+
+.editor-controls input[type="text"],
+.editor-controls input[type="number"],
+.editor-controls select {
+    background-color: var(--le-bg);
+    color: var(--le-text);
+    border: 1px solid var(--le-border);
+    border-radius: 6px;
+    padding: 6px 8px;
+}
+
+/* Botões do editor */
+.editor-controls .le-btn,
+.editor-container .le-btn {
+    display: inline-block;
+    padding: 8px 14px;
+    margin-right: 6px;
+    margin-bottom: 8px;
+    border-radius: 6px;
+    border: 2px solid var(--le-btn-border);
+    background: var(--le-btn-bg);
+    color: var(--le-text);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.editor-controls .le-btn:hover {
+    border-color: var(--le-accent);
+}
+.editor-controls .le-btn.primary {
+    background: var(--le-accent);
+    border-color: var(--le-accent);
+    color: #fff;
+}
+.editor-controls .le-btn.danger {
+    background: var(--le-error);
+    border-color: var(--le-error);
+    color: #fff;
 }
 
 /* Wrapper do "Canvas" da etiqueta */
@@ -117,8 +205,8 @@
 
 /* Estilo do elemento QUANDO SELECIONADO */
 .label-element.selected {
-    border: 2px solid var(--header-link-color);
-    box-shadow: 0 0 10px var(--header-link-color);
+    border: 2px solid var(--le-accent);
+    box-shadow: 0 0 10px var(--le-accent);
     z-index: 10;
 }
 
