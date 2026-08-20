@@ -15,11 +15,15 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Changed
 
-- [ef4dd4d](https://github.com/coca-mann/morefunctionsforglpi/commit/ef4dd4d) - Passa a versionar os arquivos de migration do Django (antes fora do controle de versão); ambientes com histórico de migration divergente e já aplicado devem reconciliar via `migrate <app> --fake`
-
 ### Fixed
 
 ### Security
+
+## [0.1.1] - 2026-08-20
+
+### Changed
+
+- [ef4dd4d](https://github.com/coca-mann/morefunctionsforglpi/commit/ef4dd4d) - Passa a versionar os arquivos de migration do Django (antes fora do controle de versão); ambientes com histórico de migration divergente e já aplicado devem reconciliar via `migrate <app> --fake`
 
 ## [0.1.0] - 2026-08-20
 
