@@ -35,11 +35,12 @@ a partir daqui.
   decidir a estratégia (ex: `--fake-initial`, squashing, ou recriar o
   histórico de migrations do zero por app).
 
-- [ ] **5. Criar infraestrutura de changelog e Merge Request**
-  Configurar `CHANGELOG.md` e o fluxo de MR conforme os comandos/skills
-  do Claude Code (`changelog-mr`, `changelog-release`).
+- [x] **5. Criar infraestrutura de changelog e Pull Request**
+  `CHANGELOG.md` e `docs/versioning.md` preenchidos; comandos globais
+  `/changelog-pr` e `/changelog-release` (`gh`, não `glab` — este repo é
+  GitHub) em `~/.claude/commands/`.
 
-- [ ] **6. Criar template de Pull Request para o GitHub**
+- [x] **6. Criar template de Pull Request para o GitHub**
   `.github/PULL_REQUEST_TEMPLATE.md`, alinhado ao fluxo definido no item 5.
 
 - [ ] **7. Analisar e implementar django-unfold no admin**
