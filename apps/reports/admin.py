@@ -8,7 +8,7 @@ from django.db.models import Count, Q
 from unfold.admin import ModelAdmin, TabularInline
 from .models import (
     MotivoBaixa, LaudoBaixa, ItemLaudo, LaudoTecnico,
-    ProtocoloReparo, ItemReparo, ProtocoloReparoProxy, ConfiguracaoCabecalho
+    ProtocoloReparo, ItemReparo, ConfiguracaoCabecalho
 )
 from .forms import LaudoBaixaForm, ProtocoloReparoForm
 
@@ -430,26 +430,24 @@ class LaudoBaixaAdmin(ModelAdmin):
 @admin.register(LaudoTecnico)
 class LaudoTecnicoAdmin(ModelAdmin):
     """
-    Este admin 'falso' serve como o ponto de entrada no menu principal.
-    Ele não tem lista de display, filtros, etc.
-    Sua única função é redirecionar o usuário para a página de categorias.
+    Admin 'falso': existe só pra `/admin/reports/` (a página de índice do
+    app) ter pelo menos um model com has_module_permission=True e não dar
+    404. O conteúdo de verdade dessa página vem de
+    templates/admin/reports/app_index.html.
     """
-    
-    def changelist_view(self, request, extra_context=None):
-        """
-        Sobrescreve a view de 'lista' (changelist) para redirecionar
-        o usuário para a página de índice da sua app 'reports',
-        onde está o seu template app_index.html customizado.
-        """
-        url = reverse('admin:app_list', kwargs={'app_label': self.model._meta.app_label})
-        return HttpResponseRedirect(url)
-            
+
     def has_module_permission(self, request):
-        """ 
-        Esta é a chave: esta função permite que o modelo
-        seja exibido na página inicial do admin.
-        """
-        return True
+        # Só libera a rota /admin/reports/ pra quem tem alguma permissão
+        # de verdade em algum model do app - não é liberado pra todo staff.
+        return request.user.has_module_perms('reports')
+
+    def has_view_permission(self, request, obj=None):
+        # O Django exige que o próprio LaudoTecnico (um model fake, sem
+        # permissões próprias configuradas em lugar nenhum) passe também
+        # em get_model_perms() pra aparecer em app_index - sem isso, o
+        # has_module_permission acima não é suficiente e a rota volta a
+        # dar 404 pra quem só tem permissão nos models de verdade.
+        return request.user.has_module_perms('reports')
 
 
 class ItemReparoInline(TabularInline):
@@ -713,20 +711,6 @@ class ProtocoloReparoAdmin(ModelAdmin):
 
     def has_module_permission(self, request):
         return False # Esconde da página inicial
-
-
-@admin.register(ProtocoloReparoProxy)
-class ProtocoloReparoProxyAdmin(ModelAdmin):
-    """
-    Ponto de entrada do menu principal para Protocolos de Reparo.
-    """
-    def changelist_view(self, request, extra_context=None):
-        # Redireciona para a página de categorias da app
-        url = reverse('admin:app_list', kwargs={'app_label': self.model._meta.app_label})
-        return HttpResponseRedirect(url)
-            
-    def has_module_permission(self, request):
-        return True # Mostra na página inicial
 
 
 @admin.register(ConfiguracaoCabecalho)
