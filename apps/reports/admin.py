@@ -1,5 +1,6 @@
 from django.contrib import admin, messages
 from django.http import HttpResponseRedirect
+from django.utils import timezone
 from django.utils.safestring import mark_safe
 from django.urls import reverse
 from django.contrib import admin, messages
@@ -50,7 +51,9 @@ except ImportError:
 try:
     from apps.dbcom.utils import (
         get_legacy_session_token,
-        kill_legacy_session
+        kill_legacy_session,
+        update_glpi_asset_status,
+        map_django_type_to_glpi
     )
     GLPI_SESSION_UTILS_DISPONIVEL = True
 except ImportError:
@@ -97,11 +100,23 @@ class ItemLaudoInline(admin.TabularInline):
     
     extra = 0 # Não mostrar formulários em branco por padrão
     can_delete = True # Permitir remover um item importado por engano
-    
+
     def has_add_permission(self, request, obj):
         # Impede que o usuário adicione itens manualmente por este inline
         # Itens SÓ podem ser adicionados pela 'Admin Action'
         return False
+
+    def has_delete_permission(self, request, obj=None):
+        # Trava a remoção de itens depois que a baixa já foi aplicada no GLPI
+        if obj and obj.status == 'PROCESSADO':
+            return False
+        return super().has_delete_permission(request, obj)
+
+    def get_readonly_fields(self, request, obj=None):
+        # Trava também o campo editável (motivo_baixa) depois de processado
+        if obj and obj.status == 'PROCESSADO':
+            return self.fields
+        return self.readonly_fields
 
 
 @admin.register(LaudoBaixa)
@@ -111,34 +126,48 @@ class LaudoBaixaAdmin(admin.ModelAdmin):
     form = LaudoBaixaForm
     
     list_display = (
-        'numero_documento', 
-        'data_laudo', 
-        'get_tecnico_nome_completo', 
-        'destinacao', 
+        'numero_documento',
+        'data_laudo',
+        'get_tecnico_nome_completo',
+        'destinacao',
+        'status',
         'get_item_count',
         'link_imprimir_documento'
     )
-    list_filter = ('data_laudo', 'tecnico_responsavel', 'destinacao')
+    list_filter = ('status', 'data_laudo', 'tecnico_responsavel', 'destinacao')
     search_fields = ('numero_documento', 'tecnico_responsavel__username', 'itens__nome_equipamento')
     
     # Define os 'inlines'
     inlines = [ItemLaudoInline]
     
     # Ações customizadas
-    actions = ['importar_itens_glpi']
+    actions = ['importar_itens_glpi', 'atualizar_status_itens_no_glpi']
     
     # Organização dos campos no formulário de edição
     fieldsets = (
         (None, {
-            'fields': ('numero_documento', 'data_laudo', 'tecnico_responsavel')
+            'fields': ('numero_documento', 'status', 'data_baixa_glpi', 'data_laudo', 'tecnico_responsavel')
         }),
         ('Destinação Final', {
             'fields': ('destinacao',)
         }),
     )
-    
-    # Torna o 'numero_documento' apenas leitura no formulário
-    readonly_fields = ('numero_documento',)
+
+    # Torna estes campos apenas leitura no formulário (preenchidos automaticamente)
+    readonly_fields = ('numero_documento', 'status', 'data_baixa_glpi')
+
+    def has_delete_permission(self, request, obj=None):
+        # Trava exclusão do laudo depois que a baixa já foi aplicada no GLPI
+        if obj and obj.status == 'PROCESSADO':
+            return False
+        return super().has_delete_permission(request, obj)
+
+    def get_readonly_fields(self, request, obj=None):
+        # Trava edição de destinação/técnico depois que a baixa já foi aplicada no GLPI
+        if obj and obj.status == 'PROCESSADO':
+            campos = [f.name for f in self.model._meta.fields]
+            return list(set(campos) | set(self.readonly_fields))
+        return self.readonly_fields
     
     def get_queryset(self, request):
         """
@@ -207,6 +236,9 @@ class LaudoBaixaAdmin(admin.ModelAdmin):
         if not GLPI_IMPORT_DISPONIVEL:
             if 'importar_itens_glpi' in actions:
                 del actions['importar_itens_glpi']
+        if not GLPI_SESSION_UTILS_DISPONIVEL:
+            if 'atualizar_status_itens_no_glpi' in actions:
+                del actions['atualizar_status_itens_no_glpi']
         return actions
 
     @admin.action(description='Importar equipamentos do GLPI para este laudo')
@@ -224,6 +256,13 @@ class LaudoBaixaAdmin(admin.ModelAdmin):
             return
 
         laudo = queryset.first()
+
+        if laudo.status == 'PROCESSADO':
+            self.message_user(request,
+                f"O laudo {laudo.numero_documento} já foi processado no GLPI e não pode receber novos itens.",
+                messages.ERROR
+            )
+            return
 
         # 2. Executar a query do GLPI
         try:
@@ -272,6 +311,115 @@ class LaudoBaixaAdmin(admin.ModelAdmin):
         msg = f"{itens_criados} novos itens importados para o laudo {laudo.numero_documento}. " \
               f"({itens_existentes} itens já constavam no laudo)."
         self.message_user(request, msg, messages.SUCCESS)
+
+    @admin.action(description='[GLPI] Atualizar status de todos os itens deste laudo no GLPI')
+    def atualizar_status_itens_no_glpi(self, request, queryset):
+        """
+        Ação que percorre todos os itens do laudo e atualiza o states_id no GLPI.
+        """
+        if queryset.count() != 1:
+            self.message_user(request, "Selecione apenas UM laudo para realizar esta ação.", messages.ERROR)
+            return
+
+        laudo = queryset.first()
+        itens = laudo.itens.all()
+
+        # 1. Validações de pré-condição do laudo
+        if laudo.status == 'PROCESSADO':
+            self.message_user(request,
+                f"O laudo {laudo.numero_documento} já foi processado no GLPI em "
+                f"{laudo.data_baixa_glpi:%d/%m/%Y %H:%M}. A ação não pode ser executada novamente.",
+                messages.WARNING
+            )
+            return
+
+        if not laudo.destinacao:
+            self.message_user(request, "Defina a destinação final do laudo antes de aplicar a baixa no GLPI.", messages.ERROR)
+            return
+
+        if not itens.exists():
+            self.message_user(request, "Este laudo não possui itens para atualizar.", messages.WARNING)
+            return
+
+        itens_sem_motivo = itens.filter(motivo_baixa__isnull=True).count()
+        if itens_sem_motivo > 0:
+            self.message_user(request,
+                f"{itens_sem_motivo} item(ns) deste laudo ainda não têm motivo de baixa preenchido. "
+                f"Preencha todos os motivos antes de aplicar a baixa no GLPI.",
+                messages.ERROR
+            )
+            return
+
+        # 2. Busca configuração e valida ID do status
+        config = GLPIConfig.objects.first()
+        if not config or not config.glpi_status_baixa_id:
+            self.message_user(request, "A configuração do GLPI ou o ID do Status de Baixa não foram definidos.", messages.ERROR)
+            return
+
+        if not (GLPI_SESSION_UTILS_DISPONIVEL):
+            self.message_user(request, "Funções de integração com GLPI não estão disponíveis.", messages.ERROR)
+            return
+
+        session_token = None
+        sucesso_count = 0
+        erro_count = 0
+
+        try:
+            # 3. Inicia Sessão
+            self.message_user(request, "Iniciando sessão na API do GLPI...", messages.INFO)
+            session_token, error = get_legacy_session_token(config)
+            if error:
+                raise Exception(f"Falha ao iniciar sessão: {error}")
+
+            # 4. Loop de atualização
+            for item in itens:
+                # Mapeia o tipo amigável (ex: Computador) para o itemtype do GLPI (ex: Computer)
+                itemtype = map_django_type_to_glpi(item.tipo_equipamento)
+                
+                ok, error_msg = update_glpi_asset_status(
+                    config, 
+                    session_token, 
+                    itemtype, 
+                    item.glpi_id, 
+                    config.glpi_status_baixa_id
+                )
+                
+                if ok:
+                    sucesso_count += 1
+                else:
+                    erro_count += 1
+                    # Log amigável no console do servidor para debug
+                    print(f"Erro ao atualizar item {item.glpi_id} ({itemtype}): {error_msg}")
+
+            # 5. Feedback final e trava do laudo
+            if erro_count == 0:
+                # Só marca como PROCESSADO (travando o laudo) se TODOS os itens
+                # foram atualizados com sucesso; falhas parciais deixam o laudo
+                # em RASCUNHO para que a ação possa ser executada novamente.
+                laudo.status = 'PROCESSADO'
+                laudo.data_baixa_glpi = timezone.now()
+                laudo.save(update_fields=['status', 'data_baixa_glpi'])
+
+                self.message_user(
+                    request,
+                    f"Sucesso! Todos os {sucesso_count} itens do laudo {laudo.numero_documento} foram atualizados no GLPI para o status ID {config.glpi_status_baixa_id}. O laudo foi marcado como PROCESSADO.",
+                    messages.SUCCESS
+                )
+            else:
+                self.message_user(
+                    request,
+                    f"Atualização concluída com avisos: {sucesso_count} itens atualizados e {erro_count} falhas. "
+                    f"O laudo permanece em RASCUNHO para nova tentativa. Verifique os logs do servidor para detalhes.",
+                    messages.WARNING
+                )
+
+        except Exception as e:
+            self.message_user(request, f"Erro crítico durante a integração: {e}", messages.ERROR)
+        
+        finally:
+            # 5. Encerra a Sessão
+            if session_token:
+                kill_legacy_session(config, session_token)
 
     def has_module_permission(self, request):
         """ Esconde este modelo da página inicial do admin. """

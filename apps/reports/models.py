@@ -43,12 +43,32 @@ class LaudoBaixa(models.Model):
         ('DOACAO', 'Doação'),
     ]
 
+    STATUS_CHOICES = [
+        ('RASCUNHO', 'Rascunho'),
+        ('PROCESSADO', 'Processado (Baixa aplicada no GLPI)'),
+    ]
+
     numero_documento = models.CharField(
         "Nº do Documento",
         max_length=20,
         unique=True,
         editable=False,
         help_text="Gerado automaticamente ao salvar. Ex: LT-2025-001"
+    )
+    status = models.CharField(
+        "Status",
+        max_length=15,
+        choices=STATUS_CHOICES,
+        default='RASCUNHO',
+        editable=False,
+        help_text="Indica se a baixa já foi aplicada nos itens no GLPI."
+    )
+    data_baixa_glpi = models.DateTimeField(
+        "Data da Baixa no GLPI",
+        null=True,
+        blank=True,
+        editable=False,
+        help_text="Preenchido automaticamente quando a ação de baixa no GLPI é concluída com sucesso."
     )
     data_laudo = models.DateField(
         "Data do Laudo",
@@ -187,10 +207,20 @@ class ItemLaudo(models.Model):
         verbose_name = "Item do Laudo"
         verbose_name_plural = "Itens do Laudo"
         # Garante que um item do GLPI não seja adicionado duas vezes NO MESMO laudo
-        unique_together = ('laudo', 'glpi_id', 'tipo_equipamento') 
+        unique_together = ('laudo', 'glpi_id', 'tipo_equipamento')
 
     def __str__(self):
         return self.nome_equipamento
+
+    def save(self, *args, **kwargs):
+        if self.laudo.status == 'PROCESSADO':
+            raise ValidationError("Laudo já processado no GLPI: não é possível adicionar/editar itens.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        if self.laudo.status == 'PROCESSADO':
+            raise ValidationError("Laudo já processado no GLPI: não é possível remover itens.")
+        super().delete(*args, **kwargs)
 
 
 class LaudoTecnico(LaudoBaixa):
