@@ -109,13 +109,25 @@ a partir daqui.
     funciona mas gera warning; remoção definitiva prevista pro Django
     7.0. Não bloqueia nada agora, ajustar numa limpeza futura.
 
-  **Fase B — Instalar e configurar o `django-unfold`**
-  - `pip install django-unfold==0.104.1` (reconferir compatibilidade com
-    o Django 6.1 já atualizado antes de fixar a versão)
-  - Adicionar `'unfold'` (e módulos `unfold.contrib.*` que forem
-    necessários) em `INSTALLED_APPS`, **antes** de `django.contrib.admin`
-  - Configurar o dict `UNFOLD` em `core/settings.py` (título, cores,
-    sidebar)
+  **Fase B — Instalar e configurar o `django-unfold` ([x] mecanicamente
+  concluída em 2026-08-20, commit `e7731ad`; falta confirmação visual)**
+  - `django-unfold==0.104.1` instalado, `'unfold'` em `INSTALLED_APPS`
+    antes de `django.contrib.admin`, dict `UNFOLD` mínimo (título/header)
+    em `core/settings.py`.
+  - Achado durante a instalação: a doc do Unfold exige que todo
+    `ModelAdmin`/`TabularInline` herde das classes do `unfold.admin`, não
+    das do `django.contrib.admin` — "usar o `ModelAdmin` padrão do Django
+    resulta em formulários sem estilo e funcionalidade quebrada". Trocada
+    a base de las 16 classes registradas (`dbcom`: 4, `panel`: 2,
+    `printer`: 2, `reports`: 8; `glpiintegrator` não tem nenhuma).
+  - Verificado sem navegador (extensão do Chrome não conectou nesta
+    sessão): `manage.py check` limpo, sem migrations pendentes, página de
+    login do admin responde 200 e carrega os assets estáticos do Unfold
+    (`/static/unfold/css/styles.css`, `/static/unfold/js/app.js` → 200).
+  - **Falta confirmação visual real** — só a checagem HTTP acima foi
+    possível. Antes de dar a Fase B por encerrada de vez, alguém precisa
+    abrir `/admin/` no navegador e confirmar que o tema realmente
+    renderiza certo.
 
   **Fase C — Adaptar as 6 templates customizadas, uma por vez, testando
   no navegador antes de ir pra próxima** (não migrar tudo de uma vez):
