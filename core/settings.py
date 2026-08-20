@@ -96,8 +96,15 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # AllowAdminInIframeMiddleware precisa vir ANTES do XFrameOptionsMiddleware
+    # nesta lista: o processamento da resposta acontece na ordem inversa da
+    # lista, então assim o XFrameOptionsMiddleware roda primeiro (define
+    # X-Frame-Options: DENY por padrão) e este middleware roda depois,
+    # removendo o header por último. Na ordem antiga, o X-Frame-Options
+    # removido aqui era recolocado pelo XFrameOptionsMiddleware logo em
+    # seguida, quebrando o embed do admin no iframe do GLPI.
     'apps.glpiintegrator.middleware.AllowAdminInIframeMiddleware', # Habilitado para permitir iframe do GLPI
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
 ROOT_URLCONF = 'core.urls'
