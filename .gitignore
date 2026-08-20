@@ -3,7 +3,6 @@ __pycache__
 db.sqlite3
 /static/
 .env
-migrations/
 media/
 
 # Documentos com detalhes de exploração (repo é público) - mantidos só localmente
