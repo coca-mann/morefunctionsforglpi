@@ -10,28 +10,25 @@
 {% block after_field_sets %}
 {{ block.super }}
 
-{# 
-  Só mostramos os botões se o objeto JÁ EXISTIR (tiver um ID),
-  pois precisamos dos dados salvos para fazer as chamadas de API.
-#}
+{# Ações remotas só fazem sentido com o servidor já salvo (precisam do ID pra chamar a API) #}
 {% if object_id %}
-<fieldset class="module aligned">
+<fieldset class="ps-actions">
     <h2>Ações do Servidor Remoto</h2>
-    
-    <div id="printer-status-message" style="display: none;"></div>
 
-    <div class="form-row">
-        <label>Testar Conexão:</label>
-        <button type="button" id="test-connection-btn" class="button">Testar</button>
-    </div>
-    
-    <div class="form-row">
-        <label>Buscar Impressoras:</label>
-        <button type="button" id="fetch-printers-btn" class="button">Buscar Impressoras no Servidor</button>
+    <div id="printer-status-message" class="ps-status" style="display: none;"></div>
+
+    <div class="ps-row">
+        <span class="ps-row-label">Testar Conexão</span>
+        <button type="button" id="test-connection-btn" class="ps-btn">Testar</button>
     </div>
 
-    <div class="form-row">
-        <label>Impressoras Encontradas:</label>
+    <div class="ps-row">
+        <span class="ps-row-label">Buscar Impressoras</span>
+        <button type="button" id="fetch-printers-btn" class="ps-btn">Buscar Impressoras no Servidor</button>
+    </div>
+
+    <div class="ps-row ps-row-list">
+        <span class="ps-row-label">Impressoras Encontradas</span>
         <div class="printer-list-wrapper">
             <ul id="printer-list">
                 <li class="readonly">Clique em "Buscar Impressoras" para popular esta lista.</li>
