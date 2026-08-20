@@ -84,7 +84,7 @@ a partir daqui.
 
   ### Plano de execução
 
-  **Fase A — Atualizar pacotes do ecossistema Django antes do Unfold**
+  **Fase A — Atualizar pacotes do ecossistema Django antes do Unfold ([x] concluída em 2026-08-20, commit `fbcca79`)**
   (pedido explícito do usuário, feito nesta ordem por causa do próximo
   passo). Levantado via `pip-review --local` em 2026-08-20:
   - `Django` 6.0.1 → 6.1 (estável, mesma major — checar notas de
@@ -105,6 +105,11 @@ a partir daqui.
     PDF dos laudos), `mysql-connector-python`, `cryptography`,
     `pyinstaller` e demais pacotes fora do ecossistema Django que também
     apareceram desatualizados no `pip-review`.
+  - Achado durante o `manage.py check`/leitura das release notes do 6.1:
+    `LaudoBaixaAdmin.get_actions()` (`apps/reports/admin.py:233`) está no
+    formato antigo (sem `action_location`) — deprecated no 6.1, ainda
+    funciona mas gera warning; remoção definitiva prevista pro Django
+    7.0. Não bloqueia nada agora, ajustar numa limpeza futura.
 
   **Fase B — Instalar e configurar o `django-unfold`**
   - `pip install django-unfold==0.104.1` (reconferir compatibilidade com
