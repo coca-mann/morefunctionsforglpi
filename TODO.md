@@ -50,9 +50,37 @@ a partir daqui.
 - [x] **6. Criar template de Pull Request para o GitHub**
   `.github/PULL_REQUEST_TEMPLATE.md`, alinhado ao fluxo definido no item 5.
 
-- [ ] **7. Analisar e implementar django-unfold no admin**
-  Levantamento feito em 2026-08-20. **Ainda não implementado — plano
-  registrado abaixo, aguardando execução.**
+- [x] **7. Analisar e implementar django-unfold no admin**
+  Concluído em 2026-08-20. Levantamento e plano de execução abaixo,
+  mantidos como registro histórico.
+
+  **Follow-up 2026-08-20: permissões no sidebar e em `/admin/reports/`.**
+  O `SIDEBAR.navigation` criado não tinha nenhum `permission` callback —
+  todo item aparecia pra qualquer staff, independente de ter permissão
+  granular no model. Corrigido: cada item agora tem
+  `"permission": lambda request: request.user.has_perm("<app>.view_<model>")`;
+  grupos ficam automaticamente escondidos quando nenhum item deles é
+  visível (comportamento nativo do template do Unfold, via CSS
+  `has-[ol]:has-[li]:block`, não precisou de lógica extra). O item
+  "Imprimir Etiquetas" ficou **sem** permission — a view
+  `impressao_etiquetas_view` só checa `@staff_member_required`, sem
+  permissão granular própria, então adicionar uma checagem só no sidebar
+  criaria uma inconsistência (link escondido, URL ainda acessível
+  direto). Se quiser isso mais estrito, precisa mexer na view também.
+
+  Também corrigido um bug real em `/admin/reports/`: `LaudoTecnicoAdmin`
+  (o model fake que segura a rota) tinha `has_module_permission` sempre
+  `True`, liberando a página pra qualquer staff. Trocado pra
+  `request.user.has_module_perms('reports')`. Isso sozinho não bastava —
+  o Django também exige que o próprio `LaudoTecnico` passe em
+  `get_model_perms()`, que por padrão checa a permissão específica dele
+  (`view_laudotecnico`, que ninguém tem), e sem isso a página voltava a
+  dar 404 mesmo pra quem tinha permissão nos models reais. Corrigido
+  sobrescrevendo `has_view_permission` do mesmo jeito. `app_index.html`
+  também ganhou `{% if perms.reports.view_xxx %}` em cada card. Validado
+  com um usuário de teste descartável (criado e removido na mesma
+  sessão): sem permissão → 404 na rota e sidebar só com "Dashboard"; com
+  só `view_laudobaixa` → 200, só o card/link de Laudos de Baixa aparece.
 
   Compatibilidade: sem bloqueio. `django-unfold` 0.104.1 (mais recente)
   declara suporte oficial a Django 5.2/6.0/6.1 e exige Python ≥3.12; o venv
@@ -109,51 +137,96 @@ a partir daqui.
     funciona mas gera warning; remoção definitiva prevista pro Django
     7.0. Não bloqueia nada agora, ajustar numa limpeza futura.
 
-  **Fase B — Instalar e configurar o `django-unfold` ([x] mecanicamente
-  concluída em 2026-08-20, commit `e7731ad`; falta confirmação visual)**
+  **Fase B — Instalar e configurar o `django-unfold` ([x] concluída em
+  2026-08-20, commit `e7731ad`, confirmação visual feita pelo usuário)**
   - `django-unfold==0.104.1` instalado, `'unfold'` em `INSTALLED_APPS`
-    antes de `django.contrib.admin`, dict `UNFOLD` mínimo (título/header)
-    em `core/settings.py`.
+    antes de `django.contrib.admin`, dict `UNFOLD` em `core/settings.py`.
   - Achado durante a instalação: a doc do Unfold exige que todo
     `ModelAdmin`/`TabularInline` herde das classes do `unfold.admin`, não
     das do `django.contrib.admin` — "usar o `ModelAdmin` padrão do Django
     resulta em formulários sem estilo e funcionalidade quebrada". Trocada
     a base de las 16 classes registradas (`dbcom`: 4, `panel`: 2,
     `printer`: 2, `reports`: 8; `glpiintegrator` não tem nenhuma).
-  - Verificado sem navegador (extensão do Chrome não conectou nesta
-    sessão): `manage.py check` limpo, sem migrations pendentes, página de
-    login do admin responde 200 e carrega os assets estáticos do Unfold
-    (`/static/unfold/css/styles.css`, `/static/unfold/js/app.js` → 200).
-  - **Falta confirmação visual real** — só a checagem HTTP acima foi
-    possível. Antes de dar a Fase B por encerrada de vez, alguém precisa
-    abrir `/admin/` no navegador e confirmar que o tema realmente
-    renderiza certo.
 
-  **Fase C — Adaptar as 6 templates customizadas, uma por vez, testando
-  no navegador antes de ir pra próxima** (não migrar tudo de uma vez):
-  1. `templates/admin/index.html` — reescrever pro padrão do Unfold
-     (`admin/base.html` + `DASHBOARD_CALLBACK`)
-  2. `templates/admin/reports/app_index.html` — provavelmente precisa
-     virar algo dentro do novo paradigma de sidebar do Unfold, não mais
-     um "app_index" clássico
-  3. `templates/admin/impressao_etiquetas.html`
-  4. `etiquetalayout/change_form.html` (+ JS externo `interactjs`)
-  5. `printserver/change_form.html`
-  6. `dbcom/externaldbconfig/change_form.html`
+  **Fase B.1 — Sidebar customizado (commit `e1f9282`)**
+  - `UNFOLD["SITE_HEADER"]` = "Mais Funções do GLPI"; `SIDEBAR.navigation`
+    definido explicitamente, substituindo o menu automático por-app do
+    Unfold por grupos: Início, Integração GLPI, Painel NOC, Impressão de
+    Etiquetas, Laudos e Protocolos, Administração.
+  - Cada item linka direto pra URL real do model (`admin:<app>_<model>_changelist`)
+    via `reverse_lazy`, inclusive os models "escondidos"
+    (`has_module_permission=False`: `LaudoBaixa`, `MotivoBaixa`,
+    `ProtocoloReparo`, `ConfiguracaoCabecalho`) — isso contorna
+    completamente o workaround antigo de proxy models
+    (`LaudoTecnicoAdmin`/`ProtocoloReparoProxyAdmin`) que existia só pra
+    criar um ponto de entrada clicável na página clássica `app_index` do
+    Django. Ver observação sobre `app_index.html` na Fase C abaixo.
 
-  **Fase D — Validar comportamento (não é visual, mas pode ser afetado
-  por mudança de template base)**:
-  - Singletons (`GLPIConfig`, `DashboardSettings`, `ConfiguracaoCabecalho`)
-    — redirecionamento changelist→change
-  - Travas de edição/exclusão por status (`LaudoBaixa`/`ItemLaudo`
-    `PROCESSADO`; `ProtocoloReparo`/`ItemReparo` `FINALIZADO`)
-  - Ações customizadas (`importar_itens_glpi`,
-    `atualizar_status_itens_no_glpi`, `importar_chamados_glpi`)
-  - CSP do iframe do GLPI (`AllowAdminInIframeMiddleware`) continua
-    liberando os assets estáticos do Unfold dentro do iframe
+  **Fase C — Adaptar as templates customizadas ([x] 5 de 6 concluídas,
+  commits `f1e88a5`, `aa2a1b0`, `5ffa809`, `3ce5c6b` e um commit não
+  identificado por hash aqui para `dbcom/externaldbconfig/change_form.html`)**
+  1. [x] `templates/admin/index.html` — card de atalho próprio (não usou
+     `DASHBOARD_CALLBACK` da doc oficial, mais simples pra esse caso: só
+     um link a mais no dashboard, não um dashboard novo)
+  2. [x] `templates/admin/reports/app_index.html` — recriado do zero,
+     estilo Unfold (cards com link direto pra `LaudoBaixa`,
+     `MotivoBaixa`, `ProtocoloReparo`, `ConfiguracaoCabecalho`).
+     **Histórico**: a versão original foi removida junto com
+     `LaudoTecnicoAdmin`/`ProtocoloReparoProxyAdmin` (que existiam só
+     pra dar um ponto de entrada clicável nele) por parecer código
+     morto — só que sem NENHUM model com `has_module_permission=True`
+     no app `reports`, a própria rota `/admin/reports/` passou a dar
+     404 (view `app_index` do Django exige pelo menos um). Corrigido
+     restaurando um `LaudoTecnicoAdmin` mínimo (só
+     `has_module_permission=True`, sem o redirect de antes) pra
+     destravar a rota, com o template novo fazendo o trabalho de
+     verdade. `ProtocoloReparoProxyAdmin` não foi restaurado — não é
+     necessário, um model já basta. Os models proxy `LaudoTecnico`/
+     `ProtocoloReparoProxy` continuam existindo em `models.py`.
+  3. [x] `templates/admin/impressao_etiquetas.html` — paleta própria +
+     `var(--color-primary-500)` do Unfold pro destaque; atalho no sidebar
+     e no dashboard
+  4. [x] `etiquetalayout/change_form.html` + `layout_editor.css` —
+     botões do editor (`.le-btn`), borda de seleção do elemento, fundo do
+     container
+  5. [x] `printserver/change_form.html` + `print_server_admin.css` —
+     campo "Chave de API" trocado pro `UnfoldAdminPasswordToggleWidget`
+     nativo do Unfold (não CSS manual); seção "Ações do Servidor Remoto"
+     reconstruída como card próprio (o `fieldset.module.aligned`/`form-row`
+     clássico não tem mais CSS correspondente no Unfold)
+  6. [x] `dbcom/externaldbconfig/change_form.html` — mesmo tratamento:
+     botão "Testar Conexão" e o resultado do teste (sucesso/erro) via
+     classes CSS em vez de cor fixa no JS; campo de senha do
+     `ExternalDbConfigForm` também trocado pro `UnfoldAdminPasswordToggleWidget`
 
-  **Fase E** — testar cada tela no navegador (dev server) antes de
-  declarar a tarefa concluída — não presumir pela documentação.
+  **Fase D — Validar comportamento ([x] concluída, via teste automatizado
+  com `Client` + `force_login`, já que a extensão do Chrome não conectou
+  nesta sessão)**:
+  - [x] Singletons (`GLPIConfig`, `DashboardSettings`,
+    `ConfiguracaoCabecalho`) — redirecionamento changelist→change, 302
+    confirmado nos três
+  - [x] Travas de edição/exclusão por status — `ProtocoloReparo`
+    `FINALIZADO` renderiza a página de change sem erro (fluxo de
+    `get_fieldsets`/`get_form`/`get_readonly_fields` intacto)
+  - [x] Ações customizadas — `get_actions()` continuam registradas
+    (achado à parte já anotado na Fase A: `LaudoBaixaAdmin.get_actions()`
+    está no formato deprecated do Django 6.1, não relacionado ao Unfold)
+  - [x] CSP do iframe do GLPI — **achado e corrigido, bug pré-existente
+    não relacionado ao Unfold**: `AllowAdminInIframeMiddleware` (que
+    deveria remover o `X-Frame-Options`) estava listado ANTES de
+    `django.middleware.clickjacking.XFrameOptionsMiddleware` no
+    `MIDDLEWARE` (`core/settings.py`). Como a ordem de `process_response`
+    é inversa à da lista, o `XFrameOptionsMiddleware` rodava DEPOIS e
+    recolocava `X-Frame-Options: DENY` já que o header tinha acabado de
+    sumir — confirmado via teste antes da correção. Corrigido invertendo
+    a ordem dos dois na lista; reconfirmado via teste que o header some
+    de verdade e o `Content-Security-Policy: frame-ancestors` continua
+    presente.
+
+  **Fase E — testar no navegador ([x] concluída pelo usuário**, tela por
+  tela, ao longo da implementação — a extensão do Chrome não conectou
+  nesta sessão então a IA não conseguiu verificar visualmente por conta
+  própria em nenhum momento, só via `curl`/test client).
 
 - [x] **9. Criar README para o projeto**
   `README.md` criado na raiz — funcionalidades, quick start de dev,
