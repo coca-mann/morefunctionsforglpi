@@ -50,6 +50,11 @@ a partir daqui.
   existentes no admin deste projeto (templates de confirmação de action,
   singletons, inlines, CSP para iframe do GLPI) antes de instalar.
 
+- [ ] **9. Criar README para o projeto**
+  Não existe `README.md` na raiz. Cobrir o que o projeto é, como rodar em
+  dev, como buildar o executável standalone, e um resumo de arquitetura
+  (pode reaproveitar boa parte do `CLAUDE.md`).
+
 - [ ] **8. Migrar integração GLPI para API v2.3 com OAuth**
   Hoje as escritas no GLPI (`apps/dbcom/utils.py`) usam a API legada v1
   (initSession/killSession com App-Token + User-Token). Converter para a
