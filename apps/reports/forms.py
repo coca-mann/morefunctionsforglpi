@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib.auth.models import User
+from unfold.widgets import UnfoldAdminSelectWidget
 from .models import LaudoBaixa, ProtocoloReparo
 
 
@@ -50,7 +51,8 @@ class ProtocoloReparoForm(forms.ModelForm):
         label="Fornecedor (GLPI)",
         choices=[("", "---------")], # Começa vazio
         required=True,
-        help_text="Lista de fornecedores ativos carregada do GLPI."
+        help_text="Lista de fornecedores ativos carregada do GLPI.",
+        widget=UnfoldAdminSelectWidget(),
     )
 
     class Meta:
