@@ -5,3 +5,7 @@ db.sqlite3
 .env
 migrations/
 media/
+
+# Documentos com detalhes de exploração (repo é público) - mantidos só localmente
+docs/code-review-2026-08-20.md
+docs/features.md
