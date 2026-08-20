@@ -51,9 +51,94 @@ a partir daqui.
   `.github/PULL_REQUEST_TEMPLATE.md`, alinhado ao fluxo definido no item 5.
 
 - [ ] **7. Analisar e implementar django-unfold no admin**
-  Avaliar compatibilidade com Django 6.0.1 e com as customizações já
-  existentes no admin deste projeto (templates de confirmação de action,
-  singletons, inlines, CSP para iframe do GLPI) antes de instalar.
+  Levantamento feito em 2026-08-20. **Ainda não implementado — plano
+  registrado abaixo, aguardando execução.**
+
+  Compatibilidade: sem bloqueio. `django-unfold` 0.104.1 (mais recente)
+  declara suporte oficial a Django 5.2/6.0/6.1 e exige Python ≥3.12; o venv
+  já está em 3.12.6.
+
+  Achado principal: o admin deste projeto tem bastante customização de
+  template, não é um admin "de fábrica". 6 templates custom identificados,
+  todos estendendo templates padrão do Django (`admin/change_form.html`,
+  `admin/base_site.html`, `admin/index.html`):
+  - `templates/admin/index.html` — dashboard customizada da home
+  - `templates/admin/reports/app_index.html` — índice do app `reports`
+    com links manuais pros singletons
+  - `templates/admin/impressao_etiquetas.html` (445 linhas)
+  - `apps/printer/.../etiquetalayout/change_form.html` — editor visual
+    (JS externo via CDN, `interactjs`)
+  - `apps/printer/.../printserver/change_form.html` — botões JS de busca
+    de impressora do Windows
+  - `templates/admin/dbcom/externaldbconfig/change_form.html` — botão de
+    teste de conexão MySQL via AJAX
+
+  A doc oficial do Unfold confirma que o dashboard **não é** um drop-in
+  1:1: o padrão recomendado é `templates/admin/index.html` estendendo
+  `admin/base.html` (dele) + `DASHBOARD_CALLBACK`, diferente do que já
+  existe aqui hoje (estende `admin/index.html` padrão do Django). Para os
+  `change_form.html` com blocos (`field_sets`, `content`,
+  `submit_buttons_bottom`, `admin_change_form_document_ready`) não há
+  confirmação na doc de que os nomes de bloco continuam idênticos — precisa
+  verificar na prática, tela por tela.
+
+  ### Plano de execução
+
+  **Fase A — Atualizar pacotes do ecossistema Django antes do Unfold**
+  (pedido explícito do usuário, feito nesta ordem por causa do próximo
+  passo). Levantado via `pip-review --local` em 2026-08-20:
+  - `Django` 6.0.1 → 6.1 (estável, mesma major — checar notas de
+    depreciação antes de trocar)
+  - `djangorestframework` 3.16.1 → 3.18.0
+  - `django-allauth` 65.14.0 → 65.19.1 — **achado à parte**: esta
+    dependência está no `requirements.txt` mas não é usada em lugar
+    nenhum (não está em `INSTALLED_APPS`, não é importada por nenhum
+    app). Decidir se atualiza mesmo assim ou remove — não bloqueia o
+    Unfold.
+  - `django-cors-headers`, `djangorestframework_simplejwt`, `channels`,
+    `channels_redis`: já na versão mais recente, nada a fazer.
+  - Depois do bump: `python manage.py check` + teste manual dos fluxos
+    principais (dashboard websocket, login no admin, endpoints JWT do
+    `printer`, SSO do `glpiintegrator`) antes de seguir pra Fase B.
+  - Fora do escopo (não relacionados a Django/admin, cada um merece
+    avaliação própria depois): `reportlab` 4→5 (major, afeta geração de
+    PDF dos laudos), `mysql-connector-python`, `cryptography`,
+    `pyinstaller` e demais pacotes fora do ecossistema Django que também
+    apareceram desatualizados no `pip-review`.
+
+  **Fase B — Instalar e configurar o `django-unfold`**
+  - `pip install django-unfold==0.104.1` (reconferir compatibilidade com
+    o Django 6.1 já atualizado antes de fixar a versão)
+  - Adicionar `'unfold'` (e módulos `unfold.contrib.*` que forem
+    necessários) em `INSTALLED_APPS`, **antes** de `django.contrib.admin`
+  - Configurar o dict `UNFOLD` em `core/settings.py` (título, cores,
+    sidebar)
+
+  **Fase C — Adaptar as 6 templates customizadas, uma por vez, testando
+  no navegador antes de ir pra próxima** (não migrar tudo de uma vez):
+  1. `templates/admin/index.html` — reescrever pro padrão do Unfold
+     (`admin/base.html` + `DASHBOARD_CALLBACK`)
+  2. `templates/admin/reports/app_index.html` — provavelmente precisa
+     virar algo dentro do novo paradigma de sidebar do Unfold, não mais
+     um "app_index" clássico
+  3. `templates/admin/impressao_etiquetas.html`
+  4. `etiquetalayout/change_form.html` (+ JS externo `interactjs`)
+  5. `printserver/change_form.html`
+  6. `dbcom/externaldbconfig/change_form.html`
+
+  **Fase D — Validar comportamento (não é visual, mas pode ser afetado
+  por mudança de template base)**:
+  - Singletons (`GLPIConfig`, `DashboardSettings`, `ConfiguracaoCabecalho`)
+    — redirecionamento changelist→change
+  - Travas de edição/exclusão por status (`LaudoBaixa`/`ItemLaudo`
+    `PROCESSADO`; `ProtocoloReparo`/`ItemReparo` `FINALIZADO`)
+  - Ações customizadas (`importar_itens_glpi`,
+    `atualizar_status_itens_no_glpi`, `importar_chamados_glpi`)
+  - CSP do iframe do GLPI (`AllowAdminInIframeMiddleware`) continua
+    liberando os assets estáticos do Unfold dentro do iframe
+
+  **Fase E** — testar cada tela no navegador (dev server) antes de
+  declarar a tarefa concluída — não presumir pela documentação.
 
 - [x] **9. Criar README para o projeto**
   `README.md` criado na raiz — funcionalidades, quick start de dev,
