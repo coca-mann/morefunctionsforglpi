@@ -5,6 +5,7 @@ from django.utils.safestring import mark_safe
 from django.urls import reverse
 from django.contrib import admin, messages
 from django.db.models import Count, Q
+from unfold.admin import ModelAdmin, TabularInline
 from .models import (
     MotivoBaixa, LaudoBaixa, ItemLaudo, LaudoTecnico,
     ProtocoloReparo, ItemReparo, ProtocoloReparoProxy, ConfiguracaoCabecalho
@@ -61,7 +62,7 @@ except ImportError:
 
 
 @admin.register(MotivoBaixa)
-class MotivoBaixaAdmin(admin.ModelAdmin):
+class MotivoBaixaAdmin(ModelAdmin):
     """ Admin para os Motivos de Baixa. """
     list_display = ('codigo', 'titulo')
     search_fields = ('codigo', 'titulo', 'descricao')
@@ -71,7 +72,7 @@ class MotivoBaixaAdmin(admin.ModelAdmin):
         return False
 
 
-class ItemLaudoInline(admin.TabularInline):
+class ItemLaudoInline(TabularInline):
     """
     Define a visualização de 'Itens' dentro do admin do 'Laudo'.
     """
@@ -120,7 +121,7 @@ class ItemLaudoInline(admin.TabularInline):
 
 
 @admin.register(LaudoBaixa)
-class LaudoBaixaAdmin(admin.ModelAdmin):
+class LaudoBaixaAdmin(ModelAdmin):
     """ Admin principal para o Laudo de Baixa. """
     
     form = LaudoBaixaForm
@@ -427,7 +428,7 @@ class LaudoBaixaAdmin(admin.ModelAdmin):
 
 
 @admin.register(LaudoTecnico)
-class LaudoTecnicoAdmin(admin.ModelAdmin):
+class LaudoTecnicoAdmin(ModelAdmin):
     """
     Este admin 'falso' serve como o ponto de entrada no menu principal.
     Ele não tem lista de display, filtros, etc.
@@ -451,7 +452,7 @@ class LaudoTecnicoAdmin(admin.ModelAdmin):
         return True
 
 
-class ItemReparoInline(admin.TabularInline):
+class ItemReparoInline(TabularInline):
     """
     Mostra os itens importados do GLPI dentro do Protocolo.
     """
@@ -481,7 +482,7 @@ class ItemReparoInline(admin.TabularInline):
 
 
 @admin.register(ProtocoloReparo)
-class ProtocoloReparoAdmin(admin.ModelAdmin):
+class ProtocoloReparoAdmin(ModelAdmin):
     """
     Admin principal para o Protocolo de Reparo.
     Fica "escondido" da página inicial.
@@ -715,7 +716,7 @@ class ProtocoloReparoAdmin(admin.ModelAdmin):
 
 
 @admin.register(ProtocoloReparoProxy)
-class ProtocoloReparoProxyAdmin(admin.ModelAdmin):
+class ProtocoloReparoProxyAdmin(ModelAdmin):
     """
     Ponto de entrada do menu principal para Protocolos de Reparo.
     """
@@ -729,7 +730,7 @@ class ProtocoloReparoProxyAdmin(admin.ModelAdmin):
 
 
 @admin.register(ConfiguracaoCabecalho)
-class ConfiguracaoCabecalhoAdmin(admin.ModelAdmin):
+class ConfiguracaoCabecalhoAdmin(ModelAdmin):
     """
     Admin para o Singleton de Configuração de Cabeçalho.
     Redireciona o usuário da 'lista' direto para o 'formulário'.

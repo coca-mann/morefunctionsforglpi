@@ -6,6 +6,7 @@ from django.http import JsonResponse, HttpResponseRedirect
 from django.urls import reverse
 import json
 import mysql.connector
+from unfold.admin import ModelAdmin, TabularInline
 from .models import ExternalDbConfig, GLPIConfig, AutomationRule, GLPIWebhook
 
 # --- Formulário Customizado ---
@@ -57,7 +58,7 @@ class ExternalDbConfigForm(forms.ModelForm):
 
 # --- Registro do Admin ---
 @admin.register(ExternalDbConfig)
-class ExternalDbConfigAdmin(admin.ModelAdmin):
+class ExternalDbConfigAdmin(ModelAdmin):
     # Usa o formulário customizado
     form = ExternalDbConfigForm
     
@@ -118,7 +119,7 @@ class ExternalDbConfigAdmin(admin.ModelAdmin):
 
 
 @admin.register(GLPIConfig)
-class GLPIConfigAdmin(admin.ModelAdmin):
+class GLPIConfigAdmin(ModelAdmin):
     # Atualiza o list_display com os novos campos
     
     fieldsets = (
@@ -180,7 +181,7 @@ class GLPIConfigAdmin(admin.ModelAdmin):
 
 
 # Define as Regras como "linhas" dentro do Webhook
-class AutomationRuleInline(admin.TabularInline):
+class AutomationRuleInline(TabularInline):
     model = AutomationRule
     extra = 1 # Começa com 1 linha em branco para nova regra
     fields = (
@@ -197,7 +198,7 @@ class AutomationRuleInline(admin.TabularInline):
 
 
 @admin.register(GLPIWebhook)
-class GLPIWebhookAdmin(admin.ModelAdmin):
+class GLPIWebhookAdmin(ModelAdmin):
     list_display = ('name', 'id', 'get_url')
     # Mostra a URL gerada (somente leitura)
     readonly_fields = ('get_url',)

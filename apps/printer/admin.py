@@ -1,10 +1,11 @@
 from django.contrib import admin
+from unfold.admin import ModelAdmin
 from .models import EtiquetaLayout, PrintServer
 from .forms import PrintServerAdminForm
 
 
 @admin.register(PrintServer)
-class PrintServerAdmin(admin.ModelAdmin):
+class PrintServerAdmin(ModelAdmin):
     """
     Admin para o novo modelo de Servidor de Impressão.
     """
@@ -44,7 +45,7 @@ class PrintServerAdmin(admin.ModelAdmin):
 
 
 @admin.register(EtiquetaLayout)
-class EtiquetaLayoutAdmin(admin.ModelAdmin):
+class EtiquetaLayoutAdmin(ModelAdmin):
     list_display = ('nome', 'largura_mm', 'altura_mm', 'padrao', 'atualizado_em')
     list_filter = ('padrao',)
     search_fields = ('nome', 'descricao')

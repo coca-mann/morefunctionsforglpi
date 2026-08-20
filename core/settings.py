@@ -48,6 +48,7 @@ CSP_FRAME_ANCESTORS = os.getenv('CSP_FRAME_ANCESTORS', "'self'")
 
 INSTALLED_APPS = [
     'daphne',
+    'unfold',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -244,3 +245,9 @@ SESSION_COOKIE_SAMESITE = 'None'
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SAMESITE = 'None'
 CSRF_COOKIE_SECURE = True
+
+# Tema do Django Admin (django-unfold)
+UNFOLD = {
+    "SITE_TITLE": "MoreFunctionsForGLPI",
+    "SITE_HEADER": "MoreFunctionsForGLPI",
+}
