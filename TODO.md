@@ -50,6 +50,16 @@ a partir daqui.
   existentes no admin deste projeto (templates de confirmação de action,
   singletons, inlines, CSP para iframe do GLPI) antes de instalar.
 
+- [ ] **8. Migrar integração GLPI para API v2.3 com OAuth**
+  Hoje as escritas no GLPI (`apps/dbcom/utils.py`) usam a API legada v1
+  (initSession/killSession com App-Token + User-Token). Converter para a
+  API v2.3, que usa OAuth. Decidir também se as leituras diretas via SQL
+  (`apps/dbcom/glpi_queries.py`) continuam bypassando a API ou migram
+  junto — `GLPIConfig.glpi_api_url` já aponta pra um path `/v2` mesmo com
+  o fluxo de sessão ainda sendo v1, então há inconsistência a resolver
+  aqui também. Interessa às tasks #1 (achados de segurança em
+  `dbcom/views.py`/`utils.py`) e à confirmação HMAC do webhook.
+
 ## Spec pausada (não faz parte deste TODO)
 
 `docs/superpowers/specs/2026-08-20-baixa-patrimonial-item-tracking-design.md`
