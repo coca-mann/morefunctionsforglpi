@@ -14,10 +14,12 @@ a partir daqui.
 - [x] **1. Criar branch `dev` e passar a trabalhar somente nela**
   A partir deste ponto, nada deste TODO é commitado direto na `main`.
 
-- [ ] **2. Análise completa do código: erros e redundâncias**
-  Revisar `apps/dbcom`, `apps/glpiintegrator`, `apps/panel`, `apps/printer`,
-  `apps/reports`, `core` procurando bugs, código morto, duplicação e
-  inconsistências. Produzir um relatório com os achados.
+- [x] **2. Análise completa do código: erros e redundâncias**
+  Relatório com múltiplos achados de severidade alta, boa parte segurança
+  real. **Mantido só localmente** (`docs/code-review-2026-08-20.md`,
+  gitignored — não versionado porque este repositório é público e o
+  relatório contém detalhes de exploração). Nada foi corrigido ainda —
+  próximo passo é decidir prioridade e corrigir.
 
 - [ ] **3. Documentar todas as funcionalidades disponíveis**
   Mapear o que cada app faz hoje, como referência funcional do sistema.
