@@ -7,6 +7,7 @@ from django.urls import reverse
 import json
 import mysql.connector
 from unfold.admin import ModelAdmin, TabularInline
+from unfold.widgets import UnfoldAdminPasswordToggleWidget
 from .models import ExternalDbConfig, GLPIConfig, AutomationRule, GLPIWebhook
 
 # --- Formulário Customizado ---
@@ -18,7 +19,7 @@ class ExternalDbConfigForm(forms.ModelForm):
     # podemos simplificar, mas vamos manter por enquanto)
     password_input = forms.CharField(
         label="Password",
-        widget=forms.PasswordInput(render_value=False),
+        widget=UnfoldAdminPasswordToggleWidget(render_value=False),
         required=True,
         help_text="Digite a senha do banco de dados."
     )
