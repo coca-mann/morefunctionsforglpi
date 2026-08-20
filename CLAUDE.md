@@ -18,7 +18,7 @@ python manage.py createsuperuser
 python manage.py collectstatic
 ```
 
-Note: `migrations/` is listed in `.gitignore` — migration files are **not** version-controlled in this repo. Expect to run `makemigrations` locally against your own DB state rather than relying on committed migrations.
+Note: migration files are version-controlled (`apps/*/migrations/*.py`). Do not hand-edit committed migrations; run `makemigrations` and commit the generated file like any other source change. Existing deployments that predate this (each environment had generated its own local, uncommitted migration history) were reconciled by adopting this repo's migration files as canonical and fake-applying them (`migrate <app> --fake`) wherever the target schema already matched — see git history around the `dev` branch's migrations commit for the reconciliation notes per app.
 
 Config comes from a `.env` file (see `.envexample`) loaded via `python-dotenv`: `SECRET_KEY`, `DB_ENCRYPTION_KEY` (Fernet key, required — used to encrypt stored DB/API credentials), `MYSQLDB_*`, `BASE_URL`, `CSRF_TRUSTED_ORIGINS`, `CSP_FRAME_ANCESTORS`, `CORS_ALLOWED_ORIGINS`, `REDIS_HOST`/`REDIS_PORT` (required — Channels layer is Redis-backed, no in-memory fallback is wired up).
 
