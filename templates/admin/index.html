@@ -1,28 +1,75 @@
 {% extends "admin/index.html" %}
 {% load i18n %}
 
-{# Este bloco adiciona um novo "card" no dashboard do admin #}
-{% block content %}
-  {{ block.super }} {# Mantém todo o conteúdo original do dashboard #}
+{# Adiciona um atalho pra Impressão de Etiquetas no dashboard do admin.
+   Estilo próprio (não depende de variáveis/classes do tema do admin, que
+   mudam com o Unfold) e reage ao dark mode via a classe "dark" no <html>. #}
 
-  <div class="app-list-module module">
-    <table>
-      <caption>
-        <a href="#" class="section" title="Ações customizadas">{% translate 'Ações Customizadas' %}</a>
-      </caption>
-      <tbody>
-        <tr class="model-group">
-          <th scope="row">
-            {# Este é o nosso novo link! #}
-            <a href="{% url 'admin_impressao_etiquetas' %}">
-              Impressão de Etiquetas de Ativos
-            </a>
-          </th>
-          <td>
-            Selecione ativos do GLPI para gerar etiquetas de impressão.
-          </td>
-        </tr>
-        </tbody>
-    </table>
+{% block extrastyle %}
+  {{ block.super }}
+  <style>
+    :root {
+      --mf-card-bg: #ffffff;
+      --mf-card-border: #d1d5db;
+      --mf-card-text: #111827;
+      --mf-card-text-muted: #6b7280;
+      /* Cor primária do tema do Unfold (UNFOLD["COLORS"]["primary"] no settings.py) */
+      --mf-card-accent: var(--color-primary-500);
+      --mf-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+    }
+    html.dark {
+      --mf-card-bg: #1f2937;
+      --mf-card-border: #374151;
+      --mf-card-text: #f3f4f6;
+      --mf-card-text-muted: #9ca3af;
+      --mf-card-accent: var(--color-primary-500);
+      --mf-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    }
+    .mf-shortcuts {
+      margin-bottom: 20px;
+    }
+    .mf-shortcuts h2 {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--mf-card-text-muted);
+      margin-bottom: 8px;
+    }
+    .mf-shortcut-card {
+      display: block;
+      max-width: 360px;
+      padding: 14px 16px;
+      border: 1px solid var(--mf-card-border);
+      border-radius: 8px;
+      background: var(--mf-card-bg);
+      box-shadow: var(--mf-card-shadow);
+      text-decoration: none;
+    }
+    .mf-shortcut-card:hover {
+      border-color: var(--mf-card-accent);
+    }
+    .mf-shortcut-title {
+      display: block;
+      font-weight: 600;
+      color: var(--mf-card-accent);
+      margin-bottom: 4px;
+    }
+    .mf-shortcut-desc {
+      display: block;
+      font-size: 13px;
+      color: var(--mf-card-text-muted);
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <div class="mf-shortcuts">
+    <h2>{% translate 'Ações Rápidas' %}</h2>
+    <a class="mf-shortcut-card" href="{% url 'admin_impressao_etiquetas' %}">
+      <span class="mf-shortcut-title">{% translate 'Impressão de Etiquetas de Ativos' %}</span>
+      <span class="mf-shortcut-desc">{% translate 'Selecione ativos do GLPI e gere etiquetas de impressão.' %}</span>
+    </a>
   </div>
+
+  {{ block.super }}
 {% endblock %}
