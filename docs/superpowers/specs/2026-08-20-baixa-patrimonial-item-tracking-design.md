@@ -211,11 +211,17 @@ carrega isso, não precisa mexer em `TEMPLATES` no `settings.py`).
 
 ## Testes
 
-Não há suíte de testes automatizados neste app hoje (`apps/reports` não
-tem `tests.py`), então este trabalho segue o padrão do restante do app:
-validação manual via Django admin local (rodar migration, criar laudo de
-teste, rodar a ação com e sem falhas simuladas). Não introduzo uma suíte
-nova como parte deste spec — é um esforço à parte, fora de escopo aqui.
+**Atualizado no planejamento de implementação**: `apps/reports` não tinha
+`tests.py` até este trabalho. Decidimos criar um cobrindo especificamente
+a lógica nova (trava por item, seleção de itens a reprocessar, agregado do
+laudo) usando `django.test.TestCase` puro — infraestrutura que já vem com
+o Django, sem framework/dependência nova, e sem custo real de manutenção
+adicional. Isso cobre o risco principal (regressão silenciosa na trava ou
+no reprocessamento seletivo) sem virar um projeto de "criar suíte de testes
+para o app inteiro" — não é retroativo para o resto do `reports`, só para
+este fluxo. As chamadas HTTP ao GLPI são mockadas (`unittest.mock.patch`);
+a validação da renderização real do template/admin fica com verificação
+manual (ver seção de testes fora de escopo do plano de implementação).
 
 ## Fora de escopo (explicitamente adiado)
 
