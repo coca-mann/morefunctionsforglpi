@@ -21,8 +21,10 @@ a partir daqui.
   relatório contém detalhes de exploração). Nada foi corrigido ainda —
   próximo passo é decidir prioridade e corrigir.
 
-- [ ] **3. Documentar todas as funcionalidades disponíveis**
-  Mapear o que cada app faz hoje, como referência funcional do sistema.
+- [x] **3. Documentar todas as funcionalidades disponíveis**
+  Catálogo completo, incluindo cruzamento com o audit de segurança que
+  achou vários achados novos ao mapear as funcionalidades. **Mantido só
+  localmente** (`docs/features.md`, gitignored, mesmo motivo do item 2).
 
 - [ ] **4. Resolver migrations fora do `.gitignore` sem quebrar produção**
   Hoje `migrations/` está no `.gitignore` de cada app, forçando
