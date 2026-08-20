@@ -273,11 +273,6 @@ class LaudoBaixaAdmin(admin.ModelAdmin):
               f"({itens_existentes} itens já constavam no laudo)."
         self.message_user(request, msg, messages.SUCCESS)
 
-    def get_form(self, request, obj=None, **kwargs):
-        # Coloca os campos na ordem desejada no formulário de edição
-        self.fields = ('numero_documento', 'data_laudo', 'tecnico', 'destinacao_recomendada')
-        return super().get_form(request, obj, **kwargs)
-    
     def has_module_permission(self, request):
         """ Esconde este modelo da página inicial do admin. """
         return False
