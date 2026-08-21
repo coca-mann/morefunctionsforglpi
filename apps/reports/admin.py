@@ -122,6 +122,7 @@ class ItemLaudoInline(TabularInline):
 
     class Media:
         css = {'all': ('reports/css/laudo_baixa_admin.css',)}
+        js = ('reports/js/laudo_baixa_admin.js',)
 
     _STATUS_MODIFICADOR = {
         'PENDENTE': 'lb-badge--pendente',
@@ -223,6 +224,14 @@ class LaudoBaixaAdmin(ModelAdmin):
             campos = [f.name for f in self.model._meta.fields]
             return list(set(campos) | set(self.readonly_fields))
         return self.readonly_fields
+
+    def has_change_permission(self, request, obj=None):
+        # Esconde os botões de Salvar quando o laudo já foi processado no
+        # GLPI (sem pendência nenhuma) — os campos já ficam readonly acima,
+        # mas isso também some com o "Salvar"/"Salvar e continuar editando".
+        if obj and obj.status == 'PROCESSADO':
+            return False
+        return super().has_change_permission(request, obj)
 
     def get_queryset(self, request):
         """
