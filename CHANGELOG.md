@@ -19,6 +19,16 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Security
 
+- [674760d](https://github.com/coca-mann/morefunctionsforglpi/commit/674760d) - Corrige o parsing de `DEBUG`: qualquer valor não vazio (inclusive a string `'False'`) era tratado como `True`, então `DEBUG` podia continuar ativo em produção mesmo com a variável de ambiente configurada para desligá-lo
+- [ee71076](https://github.com/coca-mann/morefunctionsforglpi/commit/ee71076) - Superusuário padrão criado no postinstall passa a ter senha aleatória por instalação em vez da senha fixa `password`, que deixava qualquer instalação esquecida acessível indefinidamente com a mesma credencial
+- [3e97456](https://github.com/coca-mann/morefunctionsforglpi/commit/3e97456) - Corrige dois problemas no login via SSO do GLPI: o parâmetro `next` (fora do payload assinado) permitia redirecionar a vítima para qualquer URL após o login, e a busca de usuário por e-mail podia logar a pessoa numa conta local já existente sem checar posse do e-mail; identidade agora é resolvida só por `glpi_id`, e o redirect é validado contra o host atual
+- [3bd70d7](https://github.com/coca-mann/morefunctionsforglpi/commit/3bd70d7) - Middleware que libera o embed do admin em iframe passa a agir só em `/admin/`; antes relaxava a proteção contra clickjacking (CSP `frame-ancestors` e remoção do `X-Frame-Options`) em toda resposta do site, incluindo o painel NOC e as APIs do printer/reports
+- [afc235e](https://github.com/coca-mann/morefunctionsforglpi/commit/afc235e) - Endpoint de webhook do GLPI volta a validar a assinatura HMAC da chamada; estava desligado de propósito, então qualquer um que descobrisse a URL do webhook conseguia disparar mudanças reais de status de ativos no GLPI
+- [fa1ee59](https://github.com/coca-mann/morefunctionsforglpi/commit/fa1ee59) - Remove os `print()` que vazavam os headers completos (App-Token, Session-Token, Authorization) da API legada do GLPI em texto puro no log do servidor a cada chamada
+- [32f98ee](https://github.com/coca-mann/morefunctionsforglpi/commit/32f98ee) - As três views que geram PDF de laudos/protocolos passam a exigir autenticação de staff; antes qualquer um que adivinhasse um ID baixava o documento sem login
+- [d4e0945](https://github.com/coca-mann/morefunctionsforglpi/commit/d4e0945) - Escapa o texto das etiquetas antes de montar o PDF: um nome de ativo com `&`, `<` ou `>` (ex.: "R&D") era interpretado como XML pelo ReportLab e derrubava a impressão com exceção não tratada
+- [6d7ee1c](https://github.com/coca-mann/morefunctionsforglpi/commit/6d7ee1c) - WebSocket do painel (`ws/panel/`) passa a exigir um token de controle para reassumir o canal de um display já identificado; antes, qualquer conexão anônima podia mandar o `clientId` de um kiosk existente e sequestrar os comandos de controle remoto (troca de tela) destinados a ele — a leitura de dados (tickets/KPIs) continua aberta, sem exigir o token
+
 ## [0.5.0] - 2026-08-21
 
 ### Added
