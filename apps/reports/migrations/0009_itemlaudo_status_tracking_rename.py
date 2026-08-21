@@ -18,30 +18,20 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        # NOTE: a primeira tentativa desta migration falhou a meio caminho
-        # (MySQL não reverte ALTER TABLE em caso de erro), então os 3 renames
-        # abaixo já foram aplicados fisicamente no banco antes desta versão
-        # do arquivo existir. SeparateDatabaseAndState avisa o Django que o
-        # estado mudou sem repetir a alteração de schema (que já aconteceu).
-        migrations.SeparateDatabaseAndState(
-            state_operations=[
-                migrations.RenameField(
-                    model_name='itemlaudo',
-                    old_name='status_glpi',
-                    new_name='status',
-                ),
-                migrations.RenameField(
-                    model_name='itemlaudo',
-                    old_name='data_processamento_glpi',
-                    new_name='processado_em',
-                ),
-                migrations.RenameField(
-                    model_name='itemlaudo',
-                    old_name='log_processamento_glpi',
-                    new_name='glpi_erro',
-                ),
-            ],
-            database_operations=[],
+        migrations.RenameField(
+            model_name='itemlaudo',
+            old_name='status_glpi',
+            new_name='status',
+        ),
+        migrations.RenameField(
+            model_name='itemlaudo',
+            old_name='data_processamento_glpi',
+            new_name='processado_em',
+        ),
+        migrations.RenameField(
+            model_name='itemlaudo',
+            old_name='log_processamento_glpi',
+            new_name='glpi_erro',
         ),
         migrations.RunPython(limpar_glpi_erro_nulo, migrations.RunPython.noop),
         migrations.AlterField(
