@@ -193,13 +193,21 @@ class ItemLaudo(models.Model):
         editable=False
     )
     numero_serie = models.CharField(
-        "Nº de Série", 
-        max_length=100, 
-        null=True, 
-        blank=True, 
+        "Nº de Série",
+        max_length=100,
+        null=True,
+        blank=True,
         editable=False
     )
-    
+    custom_asset = models.BooleanField(
+        "Ativo Customizado",
+        default=False,
+        editable=False,
+        help_text="Se marcado, 'tipo_equipamento' é o nome de um Custom Asset do GLPI "
+                   "(endpoint /Assets/Custom/<tipo>/<id>) em vez de um ativo nativo "
+                   "(endpoint /Assets/<tipo>/<id>)."
+    )
+
     # --- Campo a ser preenchido pelo técnico no Django ---
     motivo_baixa = models.ForeignKey(
         MotivoBaixa,

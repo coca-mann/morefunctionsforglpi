@@ -51,17 +51,28 @@ try:
 except ImportError:
     GLPI_REPORTS_UTILS_DISPONIVEL = False
 
-# --- Funções de SESSÃO (de dbcom.utils) (NOVO) ---
+# --- Funções de SESSÃO da API legada v1 (de dbcom.utils) ---
+# Ainda usadas por ProtocoloReparoAdmin.importar_chamados_glpi.
 try:
     from apps.dbcom.utils import (
         get_legacy_session_token,
         kill_legacy_session,
-        update_glpi_asset_status,
         map_django_type_to_glpi
     )
     GLPI_SESSION_UTILS_DISPONIVEL = True
 except ImportError:
     GLPI_SESSION_UTILS_DISPONIVEL = False
+
+# --- Funções OAuth2 da API v2.3 (de dbcom.utils) ---
+# Usadas por LaudoBaixaAdmin.atualizar_status_itens_no_glpi.
+try:
+    from apps.dbcom.utils import (
+        get_oauth_token,
+        update_glpi_asset_status_v2,
+    )
+    GLPI_OAUTH_UTILS_DISPONIVEL = True
+except ImportError:
+    GLPI_OAUTH_UTILS_DISPONIVEL = False
 
 
 @admin.register(MotivoBaixa)
@@ -212,7 +223,7 @@ class LaudoBaixaAdmin(ModelAdmin):
             campos = [f.name for f in self.model._meta.fields]
             return list(set(campos) | set(self.readonly_fields))
         return self.readonly_fields
-    
+
     def get_queryset(self, request):
         """
         Sobrescreve o queryset principal para adicionar anotações
@@ -280,7 +291,7 @@ class LaudoBaixaAdmin(ModelAdmin):
         if not GLPI_IMPORT_DISPONIVEL:
             if 'importar_itens_glpi' in actions:
                 del actions['importar_itens_glpi']
-        if not GLPI_SESSION_UTILS_DISPONIVEL:
+        if not GLPI_OAUTH_UTILS_DISPONIVEL:
             if 'atualizar_status_itens_no_glpi' in actions:
                 del actions['atualizar_status_itens_no_glpi']
         return actions
@@ -342,7 +353,8 @@ class LaudoBaixaAdmin(ModelAdmin):
                     'marca_equipamento': equip.get('marca', ''),
                     'modelo_equipamento': equip.get('modelo', ''),
                     'numero_patrimonio': equip.get('patrimonio', ''),
-                    'numero_serie': equip.get('serie', '')
+                    'numero_serie': equip.get('serie', ''),
+                    'custom_asset': bool(equip.get('custom_asset', 0))
                 }
             )
             
@@ -393,7 +405,11 @@ class LaudoBaixaAdmin(ModelAdmin):
             self.message_user(request, "A configuração do GLPI ou o ID do Status de Baixa não foram definidos.", messages.ERROR)
             return
 
-        if not GLPI_SESSION_UTILS_DISPONIVEL:
+        if not (config.glpi_api_v2_url and config.glpi_oauth_client_id and config.glpi_oauth_username):
+            self.message_user(request, "A configuração da API v2.3 (URL, Client ID ou usuário da conta de serviço) não foi definida.", messages.ERROR)
+            return
+
+        if not GLPI_OAUTH_UTILS_DISPONIVEL:
             self.message_user(request, "Funções de integração com GLPI não estão disponíveis.", messages.ERROR)
             return
 
@@ -424,25 +440,32 @@ class LaudoBaixaAdmin(ModelAdmin):
                 context,
             )
 
-        # 4. Confirmado: processa cada item pendente/com falha
-        session_token = None
+        # 4. Confirmado: processa cada item pendente/com falha (API v2.3, OAuth2)
         sucesso_count = 0
         erro_count = 0
 
         try:
-            self.message_user(request, "Iniciando sessão na API do GLPI...", messages.INFO)
-            session_token, error = get_legacy_session_token(config)
+            self.message_user(request, "Autenticando na API v2.3 do GLPI...", messages.INFO)
+            access_token, error = get_oauth_token(config)
             if error:
-                raise Exception(f"Falha ao iniciar sessão: {error}")
+                raise Exception(error)
 
             for item in itens_a_processar:
-                itemtype = map_django_type_to_glpi(item.tipo_equipamento)
-                ok, error_msg = update_glpi_asset_status(
+                # Custom Asset: 'tipo_equipamento' já é o itemtype certo pro endpoint
+                # /Assets/Custom/<tipo>/<id>. Ativo nativo: precisa mapear o nome
+                # amigável (ex: "Computador") pro itemtype da API (ex: "Computer").
+                if item.custom_asset:
+                    itemtype = item.tipo_equipamento
+                else:
+                    itemtype = map_django_type_to_glpi(item.tipo_equipamento)
+
+                ok, error_msg = update_glpi_asset_status_v2(
                     config,
-                    session_token,
+                    access_token,
                     itemtype,
                     item.glpi_id,
-                    config.glpi_status_baixa_id
+                    config.glpi_status_baixa_id,
+                    custom_asset=item.custom_asset,
                 )
 
                 if ok:
@@ -482,10 +505,6 @@ class LaudoBaixaAdmin(ModelAdmin):
 
         except Exception as e:
             self.message_user(request, f"Erro crítico durante a integração: {e}", messages.ERROR)
-
-        finally:
-            if session_token:
-                kill_legacy_session(config, session_token)
 
     def has_module_permission(self, request):
         """ Esconde este modelo da página inicial do admin. """

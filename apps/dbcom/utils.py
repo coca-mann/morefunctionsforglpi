@@ -137,6 +137,66 @@ def update_glpi_asset_status(config, session_token, itemtype, item_id, status_id
         error_msg = e.response.text if e.response else str(e)
         return False, error_msg
 
+def get_oauth_token(config):
+    """
+    Obtém um access token da API v2.3 (OAuth2, grant 'password') usando a
+    conta de serviço configurada em GLPIConfig. Token de curta duração,
+    obtido uma vez por execução da ação (sem cache/refresh).
+    """
+    url = f"{config.glpi_api_v2_url.rstrip('/')}/token"
+    data = {
+        "grant_type": "password",
+        "client_id": config.glpi_oauth_client_id,
+        "client_secret": config.get_decrypted_oauth_client_secret(),
+        "username": config.glpi_oauth_username,
+        "password": config.get_decrypted_oauth_password(),
+        "scope": "api",
+    }
+
+    try:
+        response = requests.post(url, data=data)
+        response.raise_for_status()
+        token_data = response.json()
+
+        access_token = token_data.get('access_token')
+        if not access_token:
+            return None, "Resposta do /token não continha 'access_token'."
+
+        return access_token, None
+
+    except requests.exceptions.RequestException as e:
+        error_text = e.response.text if e.response else str(e)
+        return None, f"Falha ao obter token OAuth: {error_text}"
+
+
+def update_glpi_asset_status_v2(config, access_token, itemtype, item_id, status_id, custom_asset=False):
+    """
+    Atualiza o status de um ativo via API v2.3 (OAuth2, PATCH).
+    Ativos nativos: /Assets/<itemtype>/<id>, campo 'status'.
+    Custom Assets:  /Assets/Custom/<itemtype>/<id>, campo 'state'.
+    """
+    base = config.glpi_api_v2_url.rstrip('/')
+    if custom_asset:
+        url = f"{base}/Assets/Custom/{itemtype}/{item_id}"
+        payload = {"state": {"id": status_id}}
+    else:
+        url = f"{base}/Assets/{itemtype}/{item_id}"
+        payload = {"status": {"id": status_id}}
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {access_token}",
+    }
+
+    try:
+        response = requests.patch(url, headers=headers, json=payload)
+        response.raise_for_status()
+        return True, None
+    except requests.exceptions.RequestException as e:
+        error_msg = e.response.text if e.response else str(e)
+        return False, error_msg
+
+
 def map_django_type_to_glpi(django_type):
     """
     Mapeia os nomes amigáveis de tipos de equipamentos do Django
