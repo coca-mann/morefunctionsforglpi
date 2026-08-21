@@ -14,10 +14,12 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ### Added
 
 - [e7731ad](https://github.com/coca-mann/morefunctionsforglpi/commit/e7731ad), [e1f9282](https://github.com/coca-mann/morefunctionsforglpi/commit/e1f9282), [f1e88a5](https://github.com/coca-mann/morefunctionsforglpi/commit/f1e88a5), [aa2a1b0](https://github.com/coca-mann/morefunctionsforglpi/commit/aa2a1b0), [5ffa809](https://github.com/coca-mann/morefunctionsforglpi/commit/5ffa809), [3ce5c6b](https://github.com/coca-mann/morefunctionsforglpi/commit/3ce5c6b), [d26e8d3](https://github.com/coca-mann/morefunctionsforglpi/commit/d26e8d3), [28b2463](https://github.com/coca-mann/morefunctionsforglpi/commit/28b2463) - Substitui o tema padrão do Django admin pelo `django-unfold`: sidebar reorganizado por seção com ícones, dashboard e as telas com customização própria (impressão de etiquetas, editor de layout de etiqueta, configuração de servidor de impressão, configuração de banco externo) adaptadas para o novo tema, incluindo widgets nativos de senha e dropdown
+- [471ae43](https://github.com/coca-mann/morefunctionsforglpi/commit/471ae43) - Laudo de Baixa passa a registrar o status de processamento (pendente/processado/erro) e o log de sucesso ou erro do GLPI para cada item; reexecutar a ação após uma falha parcial reprocessa só os itens ainda pendentes
 
 ### Changed
 
 - [fbcca79](https://github.com/coca-mann/morefunctionsforglpi/commit/fbcca79), [d4590d6](https://github.com/coca-mann/morefunctionsforglpi/commit/d4590d6) - Atualiza Django (6.0.1 → 6.1) e Django REST Framework (3.16.1 → 3.18.0); remove a dependência `django-allauth`, que não era utilizada em nenhum lugar do código
+- [092789f](https://github.com/coca-mann/morefunctionsforglpi/commit/092789f) - Remove os templates de login do `django-allauth` (`templates/account/login.html`, `templates/socialaccount/login.html`), órfãos desde a remoção da dependência
 
 ### Fixed
 
