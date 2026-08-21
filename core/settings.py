@@ -14,6 +14,7 @@ import os
 from dotenv import load_dotenv
 from pathlib import Path
 from datetime import timedelta
+from django.core.exceptions import ImproperlyConfigured
 from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
 
@@ -38,8 +39,17 @@ DEBUG = os.getenv('DEBUG', 'False').strip().lower() in ('true', '1', 'yes', 'on'
 
 ALLOWED_HOSTS = ['*']
 
-# Permissões para ambiente de desenvolvimento do Juliao
-csrf_trusted = os.getenv('CSRF_TRUSTED_ORIGINS', 'https://morefunctionsforglpi.luffyslair.tec.br')
+csrf_trusted = os.getenv('CSRF_TRUSTED_ORIGINS')
+if not csrf_trusted:
+    # Sem default: um domínio de produção hardcoded aqui mascarava a falta
+    # de configuração em vez de falhar alto, e vazava o domínio real pra
+    # quem lesse o código-fonte (público). Configure CSRF_TRUSTED_ORIGINS
+    # no .env (ver .envexample).
+    raise ImproperlyConfigured(
+        "CSRF_TRUSTED_ORIGINS não está definida no .env. "
+        "Defina com a(s) origem(ns) confiável(is), separadas por vírgula "
+        "(ex.: https://seu-dominio.com,https://outro-dominio.com)."
+    )
 CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in csrf_trusted.split(',')]
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')

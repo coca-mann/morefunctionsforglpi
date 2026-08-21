@@ -134,6 +134,13 @@ class PanelConsumer(AsyncWebsocketConsumer):
                 
         except json.JSONDecodeError:
             pass
+        except Exception as e:
+            # Qualquer exceção não tratada aqui (ex.: erro de banco, Redis
+            # fora do ar) propagava pra fora do consumer e o Channels fechava
+            # a conexão inteira com o código 1011, derrubando o painel por
+            # causa de um único request malformado ou uma falha passageira.
+            # Loga e mantém a conexão viva em vez de matar o socket.
+            print(f"[ERROR] Falha ao processar mensagem recebida ({text_data!r}): {e}")
 
     async def send_settings(self, settings_obj=None):
         """Fetches settings from DB and sends them to the client."""

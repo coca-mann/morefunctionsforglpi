@@ -52,7 +52,7 @@ class GLPIConfig(models.Model):
     # --- Configurações da API v1 ---
     glpi_api_url = models.URLField(
         max_length=255, 
-        default="https://glpi11.luffyslair.tec.br/api.php/v2",
+        default="https://seu-glpi.example.com/api.php/v2",
         help_text="URL base da API v2 do GLPI."
     )
     glpi_app_token = models.CharField(
@@ -75,7 +75,7 @@ class GLPIConfig(models.Model):
         "URL Base da API v2.3",
         max_length=255,
         blank=True,
-        help_text="URL base da API REST v2.3 do GLPI, sem sufixo de versão (ex: https://glpi11.luffyslair.tec.br/api.php)."
+        help_text="URL base da API REST v2.3 do GLPI, sem sufixo de versão (ex: https://seu-glpi.example.com/api.php)."
     )
     glpi_oauth_client_id = models.CharField(
         "Client ID (OAuth)",

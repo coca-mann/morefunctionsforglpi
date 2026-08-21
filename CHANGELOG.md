@@ -19,6 +19,17 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Security
 
+## [0.5.2] - 2026-08-21
+
+### Fixed
+
+- [74fa6aa](https://github.com/coca-mann/morefunctionsforglpi/commit/74fa6aa) - WebSocket do painel não derruba mais a conexão inteira quando uma mensagem recebida causa um erro inesperado (ex.: banco ou Redis fora do ar); agora loga o erro e mantém a conexão viva
+
+### Security
+
+- [6286a9c](https://github.com/coca-mann/morefunctionsforglpi/commit/6286a9c) - Corrige a permissão de exclusão dos itens de Protocolo de Reparo no admin: o inline autorizava a exclusão mesmo sem a permissão `delete_itemreparo`, por não checar a permissão real do Django
+- [fafdc65](https://github.com/coca-mann/morefunctionsforglpi/commit/fafdc65), [5932543](https://github.com/coca-mann/morefunctionsforglpi/commit/5932543) - `CSRF_TRUSTED_ORIGINS` deixa de cair silenciosamente para um domínio de produção real quando a variável de ambiente não está definida (agora falha alto); remove esse mesmo domínio dos exemplos em `.envexample` e do model `GLPIConfig`
+
 ## [0.5.1] - 2026-08-21
 
 ### Security
