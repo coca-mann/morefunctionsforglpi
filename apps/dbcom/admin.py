@@ -119,17 +119,70 @@ class ExternalDbConfigAdmin(ModelAdmin):
             return JsonResponse({'status': 'error', 'message': f'Erro inesperado: {e}'}, status=500)
 
 
+class GLPIConfigForm(forms.ModelForm):
+    """
+    Formulário customizado para o Admin do GLPIConfig: os segredos da
+    conta de serviço OAuth (client secret e senha) usam campos de senha
+    próprios, não vinculados diretamente ao model, e só sobrescrevem o
+    valor criptografado quando o usuário digita algo novo.
+    """
+
+    glpi_oauth_client_secret_input = forms.CharField(
+        label="Client Secret (OAuth)",
+        widget=UnfoldAdminPasswordToggleWidget(render_value=False),
+        required=False,
+        help_text="Deixe em branco para manter o Client Secret atual."
+    )
+    glpi_oauth_password_input = forms.CharField(
+        label="Senha da Conta de Serviço",
+        widget=UnfoldAdminPasswordToggleWidget(render_value=False),
+        required=False,
+        help_text="Deixe em branco para manter a senha atual."
+    )
+
+    class Meta:
+        model = GLPIConfig
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk and self.instance.glpi_oauth_client_secret:
+            self.fields['glpi_oauth_client_secret_input'].widget.attrs['placeholder'] = '********'
+        if self.instance and self.instance.pk and self.instance.glpi_oauth_password:
+            self.fields['glpi_oauth_password_input'].widget.attrs['placeholder'] = '********'
+
+    def save(self, commit=True):
+        client_secret = self.cleaned_data.get('glpi_oauth_client_secret_input')
+        if client_secret:
+            self.instance.set_oauth_client_secret(client_secret)
+
+        oauth_password = self.cleaned_data.get('glpi_oauth_password_input')
+        if oauth_password:
+            self.instance.set_oauth_password(oauth_password)
+
+        return super().save(commit=commit)
+
+
 @admin.register(GLPIConfig)
 class GLPIConfigAdmin(ModelAdmin):
-    # Atualiza o list_display com os novos campos
-    
+    form = GLPIConfigForm
+
     fieldsets = (
         ('Configuração da API Legada (v1)', {
             'fields': (
-                'glpi_api_url', 
-                'glpi_app_token', 
-                'glpi_user_token', 
+                'glpi_api_url',
+                'glpi_app_token',
+                'glpi_user_token',
                 'glpi_status_baixa_id',
+            )
+        }),
+        ('Configuração da API v2.3 (OAuth2 — conta de serviço)', {
+            'fields': (
+                'glpi_api_v2_url',
+                'glpi_oauth_client_id',
+                'glpi_oauth_client_secret_input',
+                'glpi_oauth_username',
+                'glpi_oauth_password_input',
             )
         }),
     )

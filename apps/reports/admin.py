@@ -51,17 +51,28 @@ try:
 except ImportError:
     GLPI_REPORTS_UTILS_DISPONIVEL = False
 
-# --- Funções de SESSÃO (de dbcom.utils) (NOVO) ---
+# --- Funções de SESSÃO da API legada v1 (de dbcom.utils) ---
+# Ainda usadas por ProtocoloReparoAdmin.importar_chamados_glpi.
 try:
     from apps.dbcom.utils import (
         get_legacy_session_token,
         kill_legacy_session,
-        update_glpi_asset_status,
         map_django_type_to_glpi
     )
     GLPI_SESSION_UTILS_DISPONIVEL = True
 except ImportError:
     GLPI_SESSION_UTILS_DISPONIVEL = False
+
+# --- Funções OAuth2 da API v2.3 (de dbcom.utils) ---
+# Usadas por LaudoBaixaAdmin.atualizar_status_itens_no_glpi.
+try:
+    from apps.dbcom.utils import (
+        get_oauth_token,
+        update_glpi_asset_status_v2,
+    )
+    GLPI_OAUTH_UTILS_DISPONIVEL = True
+except ImportError:
+    GLPI_OAUTH_UTILS_DISPONIVEL = False
 
 
 @admin.register(MotivoBaixa)
@@ -109,21 +120,24 @@ class ItemLaudoInline(TabularInline):
     extra = 0 # Não mostrar formulários em branco por padrão
     can_delete = True # Permitir remover um item importado por engano
 
-    _STATUS_CORES = {
-        'PENDENTE': ('#4b5563', '#f3f4f6'),
-        'PROCESSADO': ('#15803d', '#dcfce7'),
-        'FALHA': ('#b91c1c', '#fee2e2'),
+    class Media:
+        css = {'all': ('reports/css/laudo_baixa_admin.css',)}
+        js = ('reports/js/laudo_baixa_admin.js',)
+
+    _STATUS_MODIFICADOR = {
+        'PENDENTE': 'lb-badge--pendente',
+        'PROCESSADO': 'lb-badge--processado',
+        'FALHA': 'lb-badge--falha',
     }
 
     @admin.display(description="Status GLPI")
     def status_badge(self, obj):
         if not obj.pk:
             return "-"
-        fg, bg = self._STATUS_CORES.get(obj.status, self._STATUS_CORES['PENDENTE'])
+        modificador = self._STATUS_MODIFICADOR.get(obj.status, 'lb-badge--pendente')
         return format_html(
-            '<span style="display:inline-block;padding:2px 8px;border-radius:9999px;'
-            'font-size:11px;font-weight:600;white-space:nowrap;color:{0};background-color:{1};">{2}</span>',
-            fg, bg, obj.get_status_display()
+            '<span class="lb-badge {0}">{1}</span>',
+            modificador, obj.get_status_display()
         )
 
     @admin.display(description="Log")
@@ -138,12 +152,13 @@ class ItemLaudoInline(TabularInline):
         )
         texto = obj.glpi_erro or f"Atualizado com sucesso em {data_str}."
         return format_html(
-            '<button type="button" class="button" '
+            '<button type="button" class="lb-btn" '
             'onclick="document.getElementById(\'{0}\').showModal()">Ver log</button>'
-            '<dialog id="{0}" style="max-width:480px;padding:16px;border-radius:8px;border:1px solid #d1d5db;">'
-            '<p style="white-space:pre-wrap;word-break:break-word;margin:0 0 8px 0;">{1}</p>'
-            '<p style="color:#6b7280;font-size:11px;margin:0 0 12px 0;">{2}</p>'
-            '<form method="dialog"><button type="submit" class="button">Fechar</button></form>'
+            '<dialog id="{0}" class="lb-dialog">'
+            '<p class="lb-dialog__message">{1}</p>'
+            '<p class="lb-dialog__meta">{2}</p>'
+            '<button type="button" class="lb-btn" '
+            'onclick="this.closest(\'dialog\').close()">Fechar</button>'
             '</dialog>',
             modal_id, texto, data_str
         )
@@ -165,13 +180,16 @@ class LaudoBaixaAdmin(ModelAdmin):
     """ Admin principal para o Laudo de Baixa. """
     
     form = LaudoBaixaForm
-    
+
+    class Media:
+        js = ('reports/js/laudo_baixa_admin.js',)
+
     list_display = (
         'numero_documento',
         'data_laudo',
         'get_tecnico_nome_completo',
         'destinacao',
-        'status',
+        'status_com_marcador',
         'get_item_count',
         'link_imprimir_documento'
     )
@@ -209,7 +227,15 @@ class LaudoBaixaAdmin(ModelAdmin):
             campos = [f.name for f in self.model._meta.fields]
             return list(set(campos) | set(self.readonly_fields))
         return self.readonly_fields
-    
+
+    def has_change_permission(self, request, obj=None):
+        # Esconde os botões de Salvar quando o laudo já foi processado no
+        # GLPI (sem pendência nenhuma) — os campos já ficam readonly acima,
+        # mas isso também some com o "Salvar"/"Salvar e continuar editando".
+        if obj and obj.status == 'PROCESSADO':
+            return False
+        return super().has_change_permission(request, obj)
+
     def get_queryset(self, request):
         """
         Sobrescreve o queryset principal para adicionar anotações
@@ -237,7 +263,14 @@ class LaudoBaixaAdmin(ModelAdmin):
         # 'obj' é a instância do LaudoBaixa
         # Apenas chamamos a propriedade que já existe no models.py
         return obj.tecnico_nome_completo
-    
+
+    @admin.display(description='Status', ordering='status')
+    def status_com_marcador(self, obj):
+        # 'data-laudo-status' é lido pelo JS da changelist pra desabilitar o
+        # checkbox de seleção de laudos já PROCESSADO (não faz sentido
+        # selecioná-los pra rodar uma action).
+        return format_html('<span data-laudo-status="{0}">{1}</span>', obj.status, obj.get_status_display())
+
     def link_imprimir_documento(self, obj):
         """
         Verifica as condições e mostra o link apropriado:
@@ -277,7 +310,7 @@ class LaudoBaixaAdmin(ModelAdmin):
         if not GLPI_IMPORT_DISPONIVEL:
             if 'importar_itens_glpi' in actions:
                 del actions['importar_itens_glpi']
-        if not GLPI_SESSION_UTILS_DISPONIVEL:
+        if not GLPI_OAUTH_UTILS_DISPONIVEL:
             if 'atualizar_status_itens_no_glpi' in actions:
                 del actions['atualizar_status_itens_no_glpi']
         return actions
@@ -339,7 +372,8 @@ class LaudoBaixaAdmin(ModelAdmin):
                     'marca_equipamento': equip.get('marca', ''),
                     'modelo_equipamento': equip.get('modelo', ''),
                     'numero_patrimonio': equip.get('patrimonio', ''),
-                    'numero_serie': equip.get('serie', '')
+                    'numero_serie': equip.get('serie', ''),
+                    'custom_asset': bool(equip.get('custom_asset', 0))
                 }
             )
             
@@ -390,7 +424,11 @@ class LaudoBaixaAdmin(ModelAdmin):
             self.message_user(request, "A configuração do GLPI ou o ID do Status de Baixa não foram definidos.", messages.ERROR)
             return
 
-        if not GLPI_SESSION_UTILS_DISPONIVEL:
+        if not (config.glpi_api_v2_url and config.glpi_oauth_client_id and config.glpi_oauth_username):
+            self.message_user(request, "A configuração da API v2.3 (URL, Client ID ou usuário da conta de serviço) não foi definida.", messages.ERROR)
+            return
+
+        if not GLPI_OAUTH_UTILS_DISPONIVEL:
             self.message_user(request, "Funções de integração com GLPI não estão disponíveis.", messages.ERROR)
             return
 
@@ -421,25 +459,32 @@ class LaudoBaixaAdmin(ModelAdmin):
                 context,
             )
 
-        # 4. Confirmado: processa cada item pendente/com falha
-        session_token = None
+        # 4. Confirmado: processa cada item pendente/com falha (API v2.3, OAuth2)
         sucesso_count = 0
         erro_count = 0
 
         try:
-            self.message_user(request, "Iniciando sessão na API do GLPI...", messages.INFO)
-            session_token, error = get_legacy_session_token(config)
+            self.message_user(request, "Autenticando na API v2.3 do GLPI...", messages.INFO)
+            access_token, error = get_oauth_token(config)
             if error:
-                raise Exception(f"Falha ao iniciar sessão: {error}")
+                raise Exception(error)
 
             for item in itens_a_processar:
-                itemtype = map_django_type_to_glpi(item.tipo_equipamento)
-                ok, error_msg = update_glpi_asset_status(
+                # Custom Asset: 'tipo_equipamento' já é o itemtype certo pro endpoint
+                # /Assets/Custom/<tipo>/<id>. Ativo nativo: precisa mapear o nome
+                # amigável (ex: "Computador") pro itemtype da API (ex: "Computer").
+                if item.custom_asset:
+                    itemtype = item.tipo_equipamento
+                else:
+                    itemtype = map_django_type_to_glpi(item.tipo_equipamento)
+
+                ok, error_msg = update_glpi_asset_status_v2(
                     config,
-                    session_token,
+                    access_token,
                     itemtype,
                     item.glpi_id,
-                    config.glpi_status_baixa_id
+                    config.glpi_status_baixa_id,
+                    custom_asset=item.custom_asset,
                 )
 
                 if ok:
@@ -479,10 +524,6 @@ class LaudoBaixaAdmin(ModelAdmin):
 
         except Exception as e:
             self.message_user(request, f"Erro crítico durante a integração: {e}", messages.ERROR)
-
-        finally:
-            if session_token:
-                kill_legacy_session(config, session_token)
 
     def has_module_permission(self, request):
         """ Esconde este modelo da página inicial do admin. """

@@ -1,0 +1,188 @@
+/* Paleta própria da página, independente das variáveis do tema do admin
+   (o Unfold usa Tailwind com build fixo, então classes utilitárias
+   arbitrárias não têm efeito aqui — a página define suas próprias cores
+   e reage ao dark mode via a classe "dark" no <html>). A cor de destaque
+   usa a mesma cor primária do tema (UNFOLD["COLORS"]["primary"] no
+   settings.py). Mesmo padrão usado em apps/printer/static/printer/css/print_server_admin.css. */
+:root {
+    --lb-bg: #ffffff;
+    --lb-bg-muted: #f3f4f6;
+    --lb-border: #d1d5db;
+    --lb-text: #111827;
+    --lb-text-muted: #6b7280;
+    --lb-accent: var(--color-primary-500);
+    --lb-btn-bg: #e5e7eb;
+    --lb-btn-border: #9ca3af;
+    --lb-pendente-bg: #f3f4f6;
+    --lb-pendente-fg: #4b5563;
+    --lb-processado-bg: #dcfce7;
+    --lb-processado-fg: #15803d;
+    --lb-falha-bg: #fee2e2;
+    --lb-falha-fg: #b91c1c;
+}
+html.dark {
+    --lb-bg: #1f2937;
+    --lb-bg-muted: #111827;
+    --lb-border: #374151;
+    --lb-text: #f3f4f6;
+    --lb-text-muted: #9ca3af;
+    --lb-accent: var(--color-primary-500);
+    --lb-btn-bg: #3f4a5c;
+    --lb-btn-border: #6b7280;
+    --lb-pendente-bg: #374151;
+    --lb-pendente-fg: #d1d5db;
+    --lb-processado-bg: rgba(22, 163, 74, 0.15);
+    --lb-processado-fg: #4ade80;
+    --lb-falha-bg: rgba(220, 38, 38, 0.15);
+    --lb-falha-fg: #f87171;
+}
+
+/* Badge de status por item (inline do Laudo de Baixa) */
+.lb-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.lb-badge--pendente {
+    background: var(--lb-pendente-bg);
+    color: var(--lb-pendente-fg);
+}
+.lb-badge--processado {
+    background: var(--lb-processado-bg);
+    color: var(--lb-processado-fg);
+}
+.lb-badge--falha {
+    background: var(--lb-falha-bg);
+    color: var(--lb-falha-fg);
+}
+
+/* Botão "Ver log" e "Confirmar baixa no GLPI" */
+.lb-btn {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 2px solid var(--lb-btn-border);
+    background: var(--lb-btn-bg);
+    color: var(--lb-text);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+.lb-btn:hover {
+    border-color: var(--lb-accent);
+}
+.lb-btn--primary {
+    background: var(--lb-accent);
+    border-color: var(--lb-accent);
+    color: #fff;
+}
+.lb-btn--primary:hover {
+    opacity: 0.9;
+}
+
+/* Modal de log (elemento nativo <dialog>).
+   Centralização explícita (position: fixed + translate) em vez de confiar
+   no "margin: auto" padrão do navegador: o preflight do Tailwind (usado
+   pelo Unfold) zera margin em todo mundo, e qualquer ancestral com
+   "transform" na árvore quebraria um <dialog> centralizado só por margin. */
+.lb-dialog {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    margin: 0;
+    max-width: 480px;
+    width: 90vw;
+    padding: 18px 20px;
+    border-radius: 8px;
+    border: 1px solid var(--lb-border);
+    background: var(--lb-bg);
+    color: var(--lb-text);
+    opacity: 0;
+    scale: 0.95;
+    transition: opacity 0.16s ease, scale 0.16s ease,
+        overlay 0.16s ease allow-discrete, display 0.16s ease allow-discrete;
+}
+.lb-dialog[open] {
+    opacity: 1;
+    scale: 1;
+}
+@starting-style {
+    .lb-dialog[open] {
+        opacity: 0;
+        scale: 0.95;
+    }
+}
+.lb-dialog::backdrop {
+    background: rgba(17, 24, 39, 0.6);
+    opacity: 0;
+    transition: opacity 0.16s ease, overlay 0.16s ease allow-discrete, display 0.16s ease allow-discrete;
+}
+.lb-dialog[open]::backdrop {
+    opacity: 1;
+}
+@starting-style {
+    .lb-dialog[open]::backdrop {
+        opacity: 0;
+    }
+}
+.lb-dialog__message {
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin: 0 0 8px 0;
+}
+.lb-dialog__meta {
+    color: var(--lb-text-muted);
+    font-size: 11px;
+    margin: 0 0 16px 0;
+}
+
+/* Tela de confirmação de baixa (confirma_baixa_glpi.html) */
+.lb-confirm-intro {
+    color: var(--lb-text);
+    margin-bottom: 16px;
+}
+.lb-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid var(--lb-border);
+    border-radius: 8px;
+    overflow: hidden;
+    color: var(--lb-text);
+    margin-bottom: 20px;
+}
+.lb-table th,
+.lb-table td {
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--lb-border);
+    font-size: 13px;
+}
+.lb-table th {
+    background: var(--lb-bg-muted);
+    font-weight: 700;
+    color: var(--lb-text-muted);
+    text-transform: uppercase;
+    font-size: 11px;
+}
+.lb-table tbody tr:last-child td {
+    border-bottom: none;
+}
+.lb-table tbody tr:hover {
+    background: var(--lb-bg-muted);
+}
+.lb-error-detail {
+    color: var(--lb-falha-fg);
+    display: block;
+    margin-top: 2px;
+}
+.lb-confirm-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}

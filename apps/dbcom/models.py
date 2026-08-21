@@ -70,6 +70,36 @@ class GLPIConfig(models.Model):
         help_text="O ID do status no GLPI que será aplicado aos itens deste laudo (ex: status 'Baixado' ou 'Inativo')."
     )
 
+    # --- Configurações da API v2.3 (OAuth2) ---
+    glpi_api_v2_url = models.URLField(
+        "URL Base da API v2.3",
+        max_length=255,
+        blank=True,
+        help_text="URL base da API REST v2.3 do GLPI, sem sufixo de versão (ex: https://glpi11.luffyslair.tec.br/api.php)."
+    )
+    glpi_oauth_client_id = models.CharField(
+        "Client ID (OAuth)",
+        max_length=100,
+        blank=True,
+        help_text="Client ID do OAuthClient cadastrado no GLPI (Configurar > Geral > API > Clientes OAuth)."
+    )
+    glpi_oauth_client_secret = models.TextField(
+        "Client Secret (OAuth, criptografado)",
+        blank=True,
+        help_text="Client Secret do OAuthClient (será salvo criptografado)."
+    )
+    glpi_oauth_username = models.CharField(
+        "Usuário da Conta de Serviço",
+        max_length=100,
+        blank=True,
+        help_text="Login de uma conta de serviço do GLPI usada só para autenticar na API v2.3 (grant 'password')."
+    )
+    glpi_oauth_password = models.TextField(
+        "Senha da Conta de Serviço (criptografada)",
+        blank=True,
+        help_text="Senha da conta de serviço (será salva criptografada)."
+    )
+
     # ... (o resto do seu modelo Singleton, com save(), delete() e __str__()) ...
     def __str__(self):
         return "Configuração da Integração GLPI"
@@ -77,9 +107,34 @@ class GLPIConfig(models.Model):
     def save(self, *args, **kwargs):
         self.pk = 1
         super(GLPIConfig, self).save(*args, **kwargs)
-        
+
     def delete(self, *args, **kwargs):
         pass # Não permite deletar
+
+    # --- Criptografia dos segredos da conta de serviço OAuth ---
+    def set_oauth_client_secret(self, plain_secret: str):
+        cipher_suite = Fernet(settings.DB_ENCRYPTION_KEY)
+        self.glpi_oauth_client_secret = (
+            cipher_suite.encrypt(plain_secret.encode()).decode() if plain_secret else ""
+        )
+
+    def get_decrypted_oauth_client_secret(self) -> str:
+        if not self.glpi_oauth_client_secret:
+            return ""
+        cipher_suite = Fernet(settings.DB_ENCRYPTION_KEY)
+        return cipher_suite.decrypt(self.glpi_oauth_client_secret.encode()).decode()
+
+    def set_oauth_password(self, plain_password: str):
+        cipher_suite = Fernet(settings.DB_ENCRYPTION_KEY)
+        self.glpi_oauth_password = (
+            cipher_suite.encrypt(plain_password.encode()).decode() if plain_password else ""
+        )
+
+    def get_decrypted_oauth_password(self) -> str:
+        if not self.glpi_oauth_password:
+            return ""
+        cipher_suite = Fernet(settings.DB_ENCRYPTION_KEY)
+        return cipher_suite.decrypt(self.glpi_oauth_password.encode()).decode()
 
     class Meta:
         verbose_name = "Configuração da Integração GLPI"

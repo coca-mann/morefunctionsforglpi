@@ -270,7 +270,7 @@ def get_equipamentos_para_baixa():
         return []
     
     sql="""
-    SELECT id, name AS nome, tipo, marca, modelo, patrimonio, serie
+    SELECT id, name AS nome, tipo, marca, modelo, patrimonio, serie, custom_asset
     FROM v_equipamentos_para_baixa
     """
     
