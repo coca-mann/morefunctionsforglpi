@@ -572,7 +572,7 @@ class ItemReparoInline(TabularInline):
     def has_delete_permission(self, request, obj=None):
         if obj and getattr(obj, 'status', None) == 'FINALIZADO':
             return False
-        return True
+        return super().has_delete_permission(request, obj)
 
     @admin.display(description="Tipo")
     def tipo_equipamento_formatado(self, obj):
