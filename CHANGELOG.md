@@ -13,15 +13,21 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Added
 
+### Changed
+
+### Fixed
+
+### Security
+
+## [0.3.0] - 2026-08-21
+
+### Added
+
 - [471ae43](https://github.com/coca-mann/morefunctionsforglpi/commit/471ae43) - Laudo de Baixa passa a registrar o status de processamento (pendente/processado/erro) e o log de sucesso ou erro do GLPI para cada item; reexecutar a ação após uma falha parcial reprocessa só os itens ainda pendentes
 
 ### Changed
 
 - [092789f](https://github.com/coca-mann/morefunctionsforglpi/commit/092789f) - Remove os templates de login do `django-allauth` (`templates/account/login.html`, `templates/socialaccount/login.html`), órfãos desde a remoção da dependência
-
-### Fixed
-
-### Security
 
 ## [0.2.0] - 2026-08-21
 
