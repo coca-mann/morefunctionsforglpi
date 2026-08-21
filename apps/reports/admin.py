@@ -180,13 +180,16 @@ class LaudoBaixaAdmin(ModelAdmin):
     """ Admin principal para o Laudo de Baixa. """
     
     form = LaudoBaixaForm
-    
+
+    class Media:
+        js = ('reports/js/laudo_baixa_admin.js',)
+
     list_display = (
         'numero_documento',
         'data_laudo',
         'get_tecnico_nome_completo',
         'destinacao',
-        'status',
+        'status_com_marcador',
         'get_item_count',
         'link_imprimir_documento'
     )
@@ -260,7 +263,14 @@ class LaudoBaixaAdmin(ModelAdmin):
         # 'obj' é a instância do LaudoBaixa
         # Apenas chamamos a propriedade que já existe no models.py
         return obj.tecnico_nome_completo
-    
+
+    @admin.display(description='Status', ordering='status')
+    def status_com_marcador(self, obj):
+        # 'data-laudo-status' é lido pelo JS da changelist pra desabilitar o
+        # checkbox de seleção de laudos já PROCESSADO (não faz sentido
+        # selecioná-los pra rodar uma action).
+        return format_html('<span data-laudo-status="{0}">{1}</span>', obj.status, obj.get_status_display())
+
     def link_imprimir_documento(self, obj):
         """
         Verifica as condições e mostra o link apropriado:
