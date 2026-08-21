@@ -45,16 +45,20 @@ def run_postinstall_logic():
         raise e
 
     # CRIAR SUPERUSUÁRIO
-    print("Criando superusuário padrão (admin/password)...")
+    print("Criando superusuário padrão 'admin'...")
     User = get_user_model()
     username = 'admin'
     email = 'admin@localhost.com'
-    password = 'password'
+    # Senha fixa aqui deixaria toda instalação esquecida acessível
+    # indefinidamente com a mesma credencial; gera uma aleatória por instalação
+    # e mostra só desta vez, já que não há e-mail/console para reenviá-la depois.
+    password = secrets.token_urlsafe(16)
 
     try:
         if not User.objects.filter(username=username).exists():
             User.objects.create_superuser(username, email, password)
             print(f"Superusuário '{username}' criado com sucesso.")
+            print(f"Senha gerada (anote agora, não será mostrada de novo): {password}")
         else:
             print(f"Superusuário '{username}' já existe, pulando criação.")
     except Exception as e:

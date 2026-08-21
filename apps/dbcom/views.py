@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.contrib.admin.views.decorators import staff_member_required
-from django.http import JsonResponse, HttpResponseServerError, HttpResponseBadRequest, HttpResponseNotFound
+from django.http import JsonResponse, HttpResponseServerError, HttpResponseBadRequest, HttpResponseForbidden, HttpResponseNotFound
 from django.views.decorators.http import require_GET
 from django.views import View
 from django.utils.decorators import method_decorator
@@ -9,6 +9,8 @@ from django.contrib import admin
 from .glpi_queries import get_assets_for_printing, get_category_parent_id
 from .models import GLPIConfig, GLPIWebhook, AutomationRule
 from .utils import change_glpi_items_status
+import hashlib
+import hmac
 import json
 
 
@@ -70,7 +72,7 @@ class GLPIWebhookView(View):
     # O 'webhook_id' vem da URL (definida em urls.py)
     def post(self, request, webhook_id, *args, **kwargs):
         
-        print(f"Webhook recebido (Validação IGNORADA) no endpoint: {webhook_id}")
+        print(f"Webhook recebido no endpoint: {webhook_id}")
 
         try:
             config = GLPIConfig.objects.get(pk=1)
@@ -84,11 +86,31 @@ class GLPIWebhookView(View):
         except GLPIWebhook.DoesNotExist:
             print(f"Erro Crítico: Webhook com ID {webhook_id} não encontrado no Django.")
             return HttpResponseNotFound("Webhook não configurado.")
-        
-        # (Aqui você pode re-adicionar a validação HMAC usando webhook.secret_key se quiser)
 
         # 2. Processar o Payload
         body_bytes = request.body
+
+        # Validação HMAC: GLPI (webhook nativo) assina cada chamada com o
+        # header 'X-GLPI-signature' = hmac_sha256(body + timestamp, secret),
+        # e manda o timestamp em 'X-GLPI-timestamp'. Sem isso, qualquer um que
+        # descubra a UUID do webhook (que é a própria URL) dispara mudanças
+        # reais de status no GLPI.
+        if not webhook.secret_key:
+            print(f"Erro Crítico: Webhook '{webhook.name}' sem secret_key configurado. Recusando chamada.")
+            return HttpResponseForbidden("Webhook sem segredo configurado.")
+
+        signature = request.headers.get('X-GLPI-Signature', '')
+        timestamp = request.headers.get('X-GLPI-Timestamp', '')
+        expected_signature = hmac.new(
+            webhook.secret_key.encode('utf-8'),
+            body_bytes + timestamp.encode('utf-8'),
+            hashlib.sha256,
+        ).hexdigest()
+
+        if not signature or not hmac.compare_digest(signature, expected_signature):
+            print(f"Assinatura HMAC inválida para o webhook '{webhook.name}' (ID {webhook_id}).")
+            return HttpResponseForbidden("Assinatura inválida.")
+
         try:
             data = json.loads(body_bytes) 
         except json.JSONDecodeError:

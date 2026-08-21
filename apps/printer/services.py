@@ -10,6 +10,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import Paragraph
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
+from xml.sax.saxutils import escape as xml_escape
 
 
 def enviar_para_servico_de_impressao(pdf_bytes, print_server: PrintServer, printer_name: str):
@@ -152,7 +153,9 @@ def gerar_e_imprimir_etiquetas(lista_de_etiquetas: list, print_server: PrintServ
                     alignment=align_enum,
                     leading=tamanho_fonte * 1.2 # Espaço entre linhas (para quebra)
                 )
-                p = Paragraph(texto, style)
+                # Paragraph interpreta o texto como mini-XML; sem escapar, um nome de
+                # ativo com '&', '<' ou '>' derruba a impressão com exceção não tratada.
+                p = Paragraph(xml_escape(texto), style)
                 
                 # 4. Calcular Alinhamento Vertical
                 (actual_w, actual_h) = p.wrapOn(c, el_w, el_h)

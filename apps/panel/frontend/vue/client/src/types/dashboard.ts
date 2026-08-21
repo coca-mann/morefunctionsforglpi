@@ -109,6 +109,7 @@ export interface ClientIdentification {
   type: 'identify'
   clientId: string
   availableScreens?: string[]
+  controlToken?: string | null
   timestamp: string
 }
 
@@ -122,6 +123,7 @@ export type WebSocketMessage =
   | ClientIdentification
   | { type: 'connection_established'; clientId: string; client_ip?: string }
   | { type: 'client_ip_response'; client_ip: string }
+  | { type: 'identified'; clientId: string; controlToken: string | null; claimed: boolean }
   | { type: 'change_screen'; screen: string }
   | { type: 'error'; message: string }
 

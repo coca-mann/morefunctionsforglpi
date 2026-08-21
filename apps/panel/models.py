@@ -59,6 +59,15 @@ class Display(models.Model):
 
     name = models.CharField(max_length=100, unique=True, verbose_name="Nome do Display (Client ID)")
     channel_name = models.CharField(max_length=255, verbose_name="Canal WebSocket")
+    control_token = models.CharField(
+        max_length=64,
+        blank=True,
+        default='',
+        verbose_name="Token de Controle",
+        help_text="Gerado no primeiro 'identify' deste client_id; exigido para "
+                   "reassumir o canal em reconexões, evitando que outra conexão "
+                   "sequestre o controle remoto deste display.",
+    )
     current_screen = models.CharField(max_length=50, choices=SCREEN_CHOICES, default='tickets', verbose_name="Tela Atual")
     available_screens = models.JSONField(default=list, verbose_name="Telas Disponíveis")
     connected_at = models.DateTimeField(auto_now_add=True, verbose_name="Conectado em")

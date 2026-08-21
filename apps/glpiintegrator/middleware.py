@@ -6,14 +6,21 @@ class AllowAdminInIframeMiddleware:
         
     def __call__(self, request):
         response = self.get_response(request)
-        
+
+        # Escopado ao admin: era middleware global (sem checagem de path) e
+        # relaxava clickjacking (CSP frame-ancestors + remoção do
+        # X-Frame-Options) em toda resposta do site — painel NOC, APIs do
+        # printer/reports etc. também perdiam a proteção, não só o admin.
+        if not request.path.startswith('/admin/'):
+            return response
+
         # Permitir que as origens configuradas incorporem o Django
         # frame-ancestors substitui o X-Frame-Options nos navegadores modernos
         csp_policy = f"frame-ancestors {settings.CSP_FRAME_ANCESTORS}"
         response['Content-Security-Policy'] = csp_policy
-        
+
         # Remover X-Frame-Options para que o Content-Security-Policy prevaleça
         if 'X-Frame-Options' in response:
             del response['X-Frame-Options']
-            
+
         return response
