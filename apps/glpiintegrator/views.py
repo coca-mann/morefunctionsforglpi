@@ -5,6 +5,7 @@ from django.contrib.auth.models import User
 from django.http import HttpResponseForbidden
 from django.shortcuts import redirect
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from apps.glpiintegrator.models import GlpiProfile
 
 
@@ -43,31 +44,45 @@ def glpi_sso(request):
         return HttpResponseForbidden("Missing user ID or email in payload.")
     
     # 5. Find or create user and link GLPI Profile
+    # Identidade é sempre resolvida por glpi_id (via GlpiProfile), nunca por
+    # e-mail: User.email não é unique no Django, então buscar/criar por e-mail
+    # logaria na conta local de quem quer que já tenha esse e-mail cadastrado,
+    # sem checar senha nem posse dele.
     try:
         glpi_profile = GlpiProfile.objects.select_related('user').get(glpi_id=glpi_user_id)
         user = glpi_profile.user
     except GlpiProfile.DoesNotExist:
-        user, created = User.objects.get_or_create(
+        if User.objects.filter(email=email).exists():
+            # E-mail já pertence a uma conta local não vinculada a este GLPI
+            # ID: falha fechado em vez de logar em conta alheia.
+            return HttpResponseForbidden(
+                "E-mail já associado a uma conta existente não vinculada a este usuário do GLPI."
+            )
+
+        user = User.objects.create(
+            username=email,
             email=email,
-            defaults={
-                'username': email,
-                'first_name': first_name,
-                'is_staff': True,
-            }
+            first_name=first_name,
+            is_staff=True,
         )
-        
-        if created:
-            # Em Django 5.x, make_random_password foi removido.
-            # Usamos secrets para gerar uma senha segura e aleatória.
-            user.set_password(secrets.token_urlsafe(32))
-            user.save()
-        
+        # Em Django 5.x, make_random_password foi removido.
+        # Usamos secrets para gerar uma senha segura e aleatória.
+        user.set_password(secrets.token_urlsafe(32))
+        user.save()
+
         GlpiProfile.objects.create(user=user, glpi_id=glpi_user_id)
-        
+
     # 6. Log the user in and redirect
     if user is not None and user.is_active:
         login(request, user)
-        next_url = request.GET.get('next', reverse('admin:index'))
-        return redirect(next_url)
-    
+        next_url = request.GET.get('next')
+        # 'next' não faz parte do payload assinado por HMAC, então qualquer um
+        # com um link de SSO válido poderia usá-lo pra redirecionar a vítima
+        # após o login real; validar contra o host atual antes de seguir.
+        if next_url and url_has_allowed_host_and_scheme(
+            next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+        ):
+            return redirect(next_url)
+        return redirect(reverse('admin:index'))
+
     return HttpResponseForbidden("User account is inactive or could not be authenticated.")
