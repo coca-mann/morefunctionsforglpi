@@ -55,12 +55,6 @@ def get_legacy_session_token(config):
         "Authorization": f"user_token {config.glpi_user_token}"
     }
 
-    # --- DEBUG: IMPRIME A REQUISIÇÃO DE SESSÃO ---
-    print("\n--- DEBUG: initSession (Chamada Saindo) ---")
-    print(f"URL: GET {url}")
-    print(f"Headers: {json.dumps(headers, indent=2)}")
-    print("------------------------------------------\n")
-
     try:
         response = requests.get(url, headers=headers)
         response.raise_for_status()
@@ -92,12 +86,6 @@ def kill_legacy_session(config, session_token):
         "App-Token": config.glpi_app_token,
         "Session-Token": session_token
     }
-    
-    # --- DEBUG: IMPRIME A REQUISIÇÃO DE KILLSESSION ---
-    print("\n--- DEBUG: killSession (Chamada Saindo) ---")
-    print(f"URL: GET {url}")
-    print(f"Headers: {json.dumps(headers, indent=2)}")
-    print("-------------------------------------------\n")
     
     try:
         requests.get(url, headers=headers)
