@@ -13,9 +13,16 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Added
 
+- [cd5ac9e](https://github.com/coca-mann/morefunctionsforglpi/commit/cd5ac9e) - A ação de aplicar a baixa no GLPI passa a usar a API REST v2.3 (OAuth2, conta de serviço) em vez da API legada v1, com PATCH direto por item e suporte tanto a ativos nativos quanto a Custom Assets (endpoint e campo de status próprios para cada caso)
+
 ### Changed
 
 ### Fixed
+
+- [0c6a98d](https://github.com/coca-mann/morefunctionsforglpi/commit/0c6a98d) - Corrige a migration `0009` do app `reports` (rename dos campos de `ItemLaudo`), que só funcionava no ambiente onde tinha sido criada; em qualquer outro ambiente limpo o `migrate` falhava com "Unknown column"
+- [b6f820a](https://github.com/coca-mann/morefunctionsforglpi/commit/b6f820a) - Corrige a estilização da tela de confirmação de baixa e do modal "Ver log" do Laudo de Baixa (sem estilo sob o tema `django-unfold`), a centralização e animação do modal, e o botão "Fechar" que estava voltando para a lista de laudos em vez de só fechar o modal
+- [1fe86c3](https://github.com/coca-mann/morefunctionsforglpi/commit/1fe86c3) - Esconde os botões de Salvar do Laudo de Baixa quando ele já está processado no GLPI, e o checkbox de remoção dos itens já processados na lista de itens do laudo
+- [b142931](https://github.com/coca-mann/morefunctionsforglpi/commit/b142931) - Desabilita a seleção de Laudos de Baixa já processados na lista do admin, inclusive via "selecionar todos", para que não sejam escolhidos por engano para rodar uma ação
 
 ### Security
 
