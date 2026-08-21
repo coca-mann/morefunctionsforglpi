@@ -46,6 +46,13 @@ const generateClientId = (): string => {
 
 const clientId = ref(generateClientId())
 
+// Token de controle emitido pelo servidor no primeiro 'identify' deste
+// clientId; precisa ser reenviado em reconexões pra reassumir o mesmo canal
+// (senão o servidor recusa o reclaim e este cliente vira só leitura,
+// evitando que uma conexão anônima sequestre o controle remoto do display).
+const controlTokenStorageKey = 'glpi_panel_control_token'
+const controlToken = ref<string | null>(localStorage.getItem(controlTokenStorageKey))
+
 export function useWebSocket(options: UseWebSocketOptions = {}) {
   const wsBaseUrl = import.meta.env.VITE_WS_BASE_URL;
 
@@ -92,6 +99,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
           type: 'identify',
           clientId: clientId.value,
           availableScreens: availableScreens,
+          controlToken: controlToken.value,
           timestamp: new Date().toISOString()
         }
         send(identification)
@@ -120,6 +128,15 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
           if (message.type === 'settings_update' && (message as any).settings) {
             settings.value = (message as any).settings
             console.log('[WebSocket] Settings updated:', settings.value)
+          }
+
+          if (message.type === 'identified') {
+            if (message.claimed && message.controlToken) {
+              controlToken.value = message.controlToken
+              localStorage.setItem(controlTokenStorageKey, message.controlToken)
+            } else if (!message.claimed) {
+              console.warn('[WebSocket] Servidor recusou reivindicar este clientId (token de controle ausente/inválido); esta conexão fica somente-leitura para controle remoto.')
+            }
           }
         } catch (e) {
           console.error('[WebSocket] Erro ao parsear mensagem:', e)

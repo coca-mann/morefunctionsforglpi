@@ -1,7 +1,7 @@
 import json
 import asyncio
-from channels.generic.websocket import AsyncWebsocketConsumer
-from asgiref.sync import sync_to_async
+import hmac
+import secrets
 from channels.generic.websocket import AsyncWebsocketConsumer
 from asgiref.sync import sync_to_async
 from apps.dbcom.glpi_queries import get_panel_data, newpanel_dashboard_ticketcounter, newpanel_dashboard_responsetimeavg, tickets_resolved_today, newpanel_dashboard_clientsatisfactionpercent, newpanel_dashboard_departmentteam, newpanel_projects_data
@@ -84,13 +84,33 @@ class PanelConsumer(AsyncWebsocketConsumer):
                 else:
                     await self.send_panel_data()
             elif message_type == 'identify':
-                # Log client identification if needed
                 client_id = data.get('clientId')
                 available_screens = data.get('availableScreens', [])
-                
-                # Register or update display
-                await sync_to_async(self.register_display)(client_id, available_screens)
-                print(f"Client identified and registered: {client_id}")
+                control_token = data.get('controlToken')
+
+                if not client_id:
+                    return
+
+                # Registra ou atualiza o display. Reassumir um client_id que já
+                # existe exige o control_token emitido no primeiro identify —
+                # sem isso, qualquer conexão anônima poderia mandar um clientId
+                # de um kiosk já existente e sequestrar o canal (e os comandos
+                # de controle remoto) daquele Display.
+                token, claimed = await sync_to_async(self.register_display)(
+                    client_id, available_screens, control_token
+                )
+
+                if claimed:
+                    print(f"Client identified and registered: {client_id}")
+                else:
+                    print(f"[WARN] identify recusado para clientId já registrado sem token válido: {client_id}")
+
+                await self.send(text_data=json.dumps({
+                    'type': 'identified',
+                    'clientId': client_id,
+                    'controlToken': token,
+                    'claimed': claimed,
+                }))
             elif message_type == 'request_ip':
                 # Get client IP from scope or headers (for proxies)
                 client_ip = self.scope.get('client', ['unknown'])[0]
@@ -215,14 +235,35 @@ class PanelConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps(response, default=str))
         await self.send(text_data=json.dumps(response, default=str))
 
-    def register_display(self, client_id, available_screens):
-        Display.objects.update_or_create(
-            name=client_id,
-            defaults={
-                'channel_name': self.channel_name,
-                'available_screens': available_screens,
-            }
-        )
+    def register_display(self, client_id, available_screens, control_token=None):
+        """
+        Retorna (token, claimed). 'claimed' indica se esta conexão passou a
+        dono do canal (e portanto recebe os comandos de display_control) do
+        client_id. Um client_id inédito ou com token vazio (registros de antes
+        desta migração) é sempre reivindicável; um já existente com token só é
+        reassumido se o token bater.
+        """
+        display = Display.objects.filter(name=client_id).first()
+
+        if display is None or not display.control_token:
+            new_token = secrets.token_urlsafe(24)
+            Display.objects.update_or_create(
+                name=client_id,
+                defaults={
+                    'channel_name': self.channel_name,
+                    'available_screens': available_screens,
+                    'control_token': new_token,
+                }
+            )
+            return new_token, True
+
+        if control_token and hmac.compare_digest(control_token, display.control_token):
+            display.channel_name = self.channel_name
+            display.available_screens = available_screens
+            display.save(update_fields=['channel_name', 'available_screens', 'last_seen'])
+            return display.control_token, True
+
+        return None, False
 
     async def display_control(self, event):
         """
