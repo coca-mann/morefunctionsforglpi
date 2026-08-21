@@ -1,5 +1,7 @@
 from django.contrib import admin, messages
+from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
 from django.http import HttpResponseRedirect
+from django.template.response import TemplateResponse
 from django.utils import timezone
 from django.utils.safestring import mark_safe
 from django.utils.html import format_html
@@ -110,30 +112,31 @@ class ItemLaudoInline(TabularInline):
     _STATUS_CORES = {
         'PENDENTE': ('#4b5563', '#f3f4f6'),
         'PROCESSADO': ('#15803d', '#dcfce7'),
-        'ERRO': ('#b91c1c', '#fee2e2'),
+        'FALHA': ('#b91c1c', '#fee2e2'),
     }
 
     @admin.display(description="Status GLPI")
     def status_badge(self, obj):
         if not obj.pk:
             return "-"
-        fg, bg = self._STATUS_CORES.get(obj.status_glpi, self._STATUS_CORES['PENDENTE'])
+        fg, bg = self._STATUS_CORES.get(obj.status, self._STATUS_CORES['PENDENTE'])
         return format_html(
             '<span style="display:inline-block;padding:2px 8px;border-radius:9999px;'
             'font-size:11px;font-weight:600;white-space:nowrap;color:{0};background-color:{1};">{2}</span>',
-            fg, bg, obj.get_status_glpi_display()
+            fg, bg, obj.get_status_display()
         )
 
     @admin.display(description="Log")
     def log_button(self, obj):
         # Só existe log depois de pelo menos uma tentativa de processamento
-        if not obj.pk or not obj.log_processamento_glpi:
+        if not obj.pk or obj.status == 'PENDENTE':
             return "-"
         modal_id = f"log-modal-{obj.pk}"
         data_str = (
-            obj.data_processamento_glpi.strftime('%d/%m/%Y %H:%M')
-            if obj.data_processamento_glpi else ''
+            obj.processado_em.strftime('%d/%m/%Y %H:%M')
+            if obj.processado_em else ''
         )
+        texto = obj.glpi_erro or f"Atualizado com sucesso em {data_str}."
         return format_html(
             '<button type="button" class="button" '
             'onclick="document.getElementById(\'{0}\').showModal()">Ver log</button>'
@@ -142,7 +145,7 @@ class ItemLaudoInline(TabularInline):
             '<p style="color:#6b7280;font-size:11px;margin:0 0 12px 0;">{2}</p>'
             '<form method="dialog"><button type="submit" class="button">Fechar</button></form>'
             '</dialog>',
-            modal_id, obj.log_processamento_glpi, data_str
+            modal_id, texto, data_str
         )
 
     def has_add_permission(self, request, obj):
@@ -150,17 +153,11 @@ class ItemLaudoInline(TabularInline):
         # Itens SÓ podem ser adicionados pela 'Admin Action'
         return False
 
-    def has_delete_permission(self, request, obj=None):
-        # Trava a remoção de itens depois que a baixa já foi aplicada no GLPI
-        if obj and obj.status == 'PROCESSADO':
-            return False
-        return super().has_delete_permission(request, obj)
-
-    def get_readonly_fields(self, request, obj=None):
-        # Trava também o campo editável (motivo_baixa) depois de processado
-        if obj and obj.status == 'PROCESSADO':
-            return self.fields
-        return self.readonly_fields
+    # Sem has_delete_permission/get_readonly_fields checando status aqui:
+    # o TabularInline só consegue travar tudo-ou-nada por formset, não por
+    # linha. A trava real é o ValidationError de ItemLaudo.save()/delete()
+    # (por item, não pelo agregado do laudo) — o usuário vê um erro de
+    # validação ao tentar salvar/apagar uma linha já PROCESSADA.
 
 
 @admin.register(LaudoBaixa)
@@ -356,36 +353,30 @@ class LaudoBaixaAdmin(ModelAdmin):
               f"({itens_existentes} itens já constavam no laudo)."
         self.message_user(request, msg, messages.SUCCESS)
 
-    @admin.action(description='[GLPI] Atualizar status de todos os itens deste laudo no GLPI')
+    @admin.action(description='[GLPI] Atualizar status dos itens pendentes/com falha no GLPI')
     def atualizar_status_itens_no_glpi(self, request, queryset):
         """
-        Ação que percorre todos os itens do laudo e atualiza o states_id no GLPI.
+        Aplica o status de baixa (config.glpi_status_baixa_id) nos itens do
+        laudo que ainda não foram processados com sucesso. Mostra uma tela
+        de confirmação antes de escrever no GLPI e só reenvia itens
+        PENDENTE/FALHA (não reprocessa itens já PROCESSADO).
         """
         if queryset.count() != 1:
             self.message_user(request, "Selecione apenas UM laudo para realizar esta ação.", messages.ERROR)
             return
 
         laudo = queryset.first()
-        itens = laudo.itens.all()
 
         # 1. Validações de pré-condição do laudo
-        if laudo.status == 'PROCESSADO':
-            self.message_user(request,
-                f"O laudo {laudo.numero_documento} já foi processado no GLPI em "
-                f"{laudo.data_baixa_glpi:%d/%m/%Y %H:%M}. A ação não pode ser executada novamente.",
-                messages.WARNING
-            )
-            return
-
         if not laudo.destinacao:
             self.message_user(request, "Defina a destinação final do laudo antes de aplicar a baixa no GLPI.", messages.ERROR)
             return
 
-        if not itens.exists():
+        if not laudo.itens.exists():
             self.message_user(request, "Este laudo não possui itens para atualizar.", messages.WARNING)
             return
 
-        itens_sem_motivo = itens.filter(motivo_baixa__isnull=True).count()
+        itens_sem_motivo = laudo.itens.filter(motivo_baixa__isnull=True).count()
         if itens_sem_motivo > 0:
             self.message_user(request,
                 f"{itens_sem_motivo} item(ns) deste laudo ainda não têm motivo de baixa preenchido. "
@@ -394,43 +385,55 @@ class LaudoBaixaAdmin(ModelAdmin):
             )
             return
 
-        # 1b. Itens já confirmados como PROCESSADO em uma tentativa anterior não são reenviados
-        itens_a_processar = itens.exclude(status_glpi='PROCESSADO')
-        itens_pulados = itens.count() - itens_a_processar.count()
-
-        if not itens_a_processar.exists():
-            self.message_user(request,
-                "Todos os itens deste laudo já foram processados com sucesso em uma tentativa anterior.",
-                messages.WARNING
-            )
-            return
-
-        # 2. Busca configuração e valida ID do status
         config = GLPIConfig.objects.first()
         if not config or not config.glpi_status_baixa_id:
             self.message_user(request, "A configuração do GLPI ou o ID do Status de Baixa não foram definidos.", messages.ERROR)
             return
 
-        if not (GLPI_SESSION_UTILS_DISPONIVEL):
+        if not GLPI_SESSION_UTILS_DISPONIVEL:
             self.message_user(request, "Funções de integração com GLPI não estão disponíveis.", messages.ERROR)
             return
 
+        # 2. Só os itens que ainda não foram processados com sucesso
+        itens_a_processar = laudo.itens.exclude(status='PROCESSADO')
+        if not itens_a_processar.exists():
+            self.message_user(request,
+                f"Todos os itens do laudo {laudo.numero_documento} já foram processados no GLPI.",
+                messages.WARNING
+            )
+            return
+
+        # 3. Sem confirmação ainda: mostra a tela intermediária
+        if request.POST.get('confirma_baixa_glpi') != 'yes':
+            context = {
+                **self.admin_site.each_context(request),
+                'title': 'Confirmar baixa no GLPI',
+                'laudo': laudo,
+                'itens': itens_a_processar,
+                'status_alvo_id': config.glpi_status_baixa_id,
+                'action_checkbox_name': ACTION_CHECKBOX_NAME,
+                'queryset': queryset,
+                'opts': self.model._meta,
+            }
+            return TemplateResponse(
+                request,
+                'admin/reports/laudobaixa/confirma_baixa_glpi.html',
+                context,
+            )
+
+        # 4. Confirmado: processa cada item pendente/com falha
         session_token = None
         sucesso_count = 0
         erro_count = 0
 
         try:
-            # 3. Inicia Sessão
             self.message_user(request, "Iniciando sessão na API do GLPI...", messages.INFO)
             session_token, error = get_legacy_session_token(config)
             if error:
                 raise Exception(f"Falha ao iniciar sessão: {error}")
 
-            # 4. Loop de atualização (só nos itens ainda não confirmados)
             for item in itens_a_processar:
-                # Mapeia o tipo amigável (ex: Computador) para o itemtype do GLPI (ex: Computer)
                 itemtype = map_django_type_to_glpi(item.tipo_equipamento)
-
                 ok, error_msg = update_glpi_asset_status(
                     config,
                     session_token,
@@ -439,54 +442,45 @@ class LaudoBaixaAdmin(ModelAdmin):
                     config.glpi_status_baixa_id
                 )
 
-                item.data_processamento_glpi = timezone.now()
                 if ok:
+                    item.status = 'PROCESSADO'
+                    item.processado_em = timezone.now()
+                    item.processado_por = request.user
+                    item.glpi_erro = ''
+                    item.save(update_fields=['status', 'processado_em', 'processado_por', 'glpi_erro'])
                     sucesso_count += 1
-                    item.status_glpi = 'PROCESSADO'
-                    item.log_processamento_glpi = (
-                        f"Atualizado com sucesso para o status ID {config.glpi_status_baixa_id} "
-                        f"em {item.data_processamento_glpi:%d/%m/%Y %H:%M}."
-                    )
                 else:
+                    item.status = 'FALHA'
+                    item.glpi_erro = error_msg or ''
+                    item.save(update_fields=['status', 'glpi_erro'])
                     erro_count += 1
-                    item.status_glpi = 'ERRO'
-                    item.log_processamento_glpi = error_msg
-                    # Log amigável no console do servidor para debug
                     print(f"Erro ao atualizar item {item.glpi_id} ({itemtype}): {error_msg}")
 
-                item.save(update_fields=['status_glpi', 'data_processamento_glpi', 'log_processamento_glpi'])
-
-            # 5. Feedback final e trava do laudo
-            # Só marca como PROCESSADO (travando o laudo) se TODOS os itens do laudo
-            # -- desta rodada ou de tentativas anteriores -- estiverem confirmados;
-            # falhas parciais deixam o laudo em RASCUNHO para uma nova tentativa,
-            # que reenvia só quem ainda não foi confirmado.
-            if not itens.exclude(status_glpi='PROCESSADO').exists():
+            # 5. Recomputa o agregado do laudo
+            todos_processados = not laudo.itens.exclude(status='PROCESSADO').exists()
+            if todos_processados and laudo.status != 'PROCESSADO':
                 laudo.status = 'PROCESSADO'
                 laudo.data_baixa_glpi = timezone.now()
                 laudo.save(update_fields=['status', 'data_baixa_glpi'])
 
-                msg = (
-                    f"Sucesso! Todos os itens do laudo {laudo.numero_documento} foram atualizados no GLPI "
-                    f"para o status ID {config.glpi_status_baixa_id}. O laudo foi marcado como PROCESSADO."
+            if erro_count == 0:
+                self.message_user(
+                    request,
+                    f"Sucesso! {sucesso_count} item(ns) do laudo {laudo.numero_documento} foram atualizados no GLPI para o status ID {config.glpi_status_baixa_id}.",
+                    messages.SUCCESS
                 )
-                if itens_pulados:
-                    msg += f" ({itens_pulados} já estavam confirmados de uma tentativa anterior.)"
-                self.message_user(request, msg, messages.SUCCESS)
             else:
-                msg = (
-                    f"Atualização concluída com avisos: {sucesso_count} itens atualizados e {erro_count} falhas nesta tentativa. "
-                    f"O laudo permanece em RASCUNHO. Veja o log de cada item na lista de itens abaixo."
+                self.message_user(
+                    request,
+                    f"{sucesso_count} item(ns) atualizados e {erro_count} falha(s). "
+                    f"Os itens com falha ficaram marcados como FALHA e podem ser reprocessados executando a ação novamente.",
+                    messages.WARNING
                 )
-                if itens_pulados:
-                    msg += f" ({itens_pulados} itens pulados por já estarem confirmados.)"
-                self.message_user(request, msg, messages.WARNING)
 
         except Exception as e:
             self.message_user(request, f"Erro crítico durante a integração: {e}", messages.ERROR)
-        
+
         finally:
-            # 5. Encerra a Sessão
             if session_token:
                 kill_legacy_session(config, session_token)
 

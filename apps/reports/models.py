@@ -145,8 +145,8 @@ class ItemLaudo(models.Model):
 
     STATUS_GLPI_CHOICES = [
         ('PENDENTE', 'Pendente'),
-        ('PROCESSADO', 'Processado'),
-        ('ERRO', 'Erro'),
+        ('PROCESSADO', 'Processado no GLPI'),
+        ('FALHA', 'Falha ao processar no GLPI'),
     ]
 
     laudo = models.ForeignKey(
@@ -211,27 +211,33 @@ class ItemLaudo(models.Model):
     )
 
     # --- Resultado da última tentativa de baixa no GLPI ---
-    status_glpi = models.CharField(
+    status = models.CharField(
         "Status no GLPI",
         max_length=15,
         choices=STATUS_GLPI_CHOICES,
         default='PENDENTE',
         editable=False,
-        help_text="Resultado da última tentativa de aplicar a baixa deste item no GLPI."
     )
-    data_processamento_glpi = models.DateTimeField(
-        "Data do Processamento",
+    glpi_erro = models.TextField(
+        "Último Erro (GLPI)",
+        blank=True,
+        editable=False,
+        help_text="Mensagem de erro da última tentativa. Fica em branco quando o item é processado com sucesso.",
+    )
+    processado_em = models.DateTimeField(
+        "Processado em",
         null=True,
         blank=True,
         editable=False,
-        help_text="Quando a última tentativa de baixa deste item foi executada."
     )
-    log_processamento_glpi = models.TextField(
-        "Log de Processamento",
+    processado_por = models.ForeignKey(
+        User,
+        verbose_name="Processado por",
         null=True,
         blank=True,
         editable=False,
-        help_text="Mensagem de sucesso ou erro retornada pelo GLPI na última tentativa."
+        on_delete=models.SET_NULL,
+        related_name='+',
     )
 
     class Meta:
@@ -244,13 +250,15 @@ class ItemLaudo(models.Model):
         return self.nome_equipamento
 
     def save(self, *args, **kwargs):
-        if self.laudo.status == 'PROCESSADO':
-            raise ValidationError("Laudo já processado no GLPI: não é possível adicionar/editar itens.")
+        if self.pk:
+            status_atual = ItemLaudo.objects.filter(pk=self.pk).values_list('status', flat=True).first()
+            if status_atual == 'PROCESSADO':
+                raise ValidationError("Item já processado no GLPI: não é possível editar.")
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        if self.laudo.status == 'PROCESSADO':
-            raise ValidationError("Laudo já processado no GLPI: não é possível remover itens.")
+        if self.status == 'PROCESSADO':
+            raise ValidationError("Item já processado no GLPI: não é possível remover.")
         super().delete(*args, **kwargs)
 
 
