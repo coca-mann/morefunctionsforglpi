@@ -1,12 +1,14 @@
+from django.contrib.admin.views.decorators import staff_member_required
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
 # REMOVA A LINHA ABAIXO DO TOPO DO ARQUIVO:
-# from weasyprint import HTML 
+# from weasyprint import HTML
 from .models import LaudoBaixa, MotivoBaixa, ProtocoloReparo, ConfiguracaoCabecalho
 import datetime
 
 
+@staff_member_required
 def gerar_pdf_laudo_baixa(request, laudo_id):
     """
     Gera um PDF para um Laudo de Baixa Patrimonial específico.
@@ -58,6 +60,7 @@ def gerar_pdf_laudo_baixa(request, laudo_id):
     return response
 
 
+@staff_member_required
 def gerar_pdf_conferencia_laudo(request, laudo_id):
     """
     Gera uma folha de conferência para um Laudo de Baixa,
@@ -100,6 +103,7 @@ def gerar_pdf_conferencia_laudo(request, laudo_id):
     return response
 
 
+@staff_member_required
 def gerar_pdf_protocolo_reparo(request, protocolo_id):
     """
     Gera um PDF para um Protocolo de Envio para Reparo.
