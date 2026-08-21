@@ -19,6 +19,16 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Security
 
+## [0.4.0] - 2026-08-21
+
+### Added
+
+- [24622da](https://github.com/coca-mann/morefunctionsforglpi/commit/24622da) - Laudo de Baixa passa a exigir confirmação antes de escrever no GLPI (tela intermediária listando os itens pendentes/com falha e o status alvo) e registra quem processou cada item; a trava de edição/exclusão agora é por item, não mais pelo agregado do laudo inteiro
+
+### Fixed
+
+- [bf61fec](https://github.com/coca-mann/morefunctionsforglpi/commit/bf61fec) - Corrige a descoberta de testes automatizados (`manage.py test`) para qualquer app do projeto: `apps/` estava sem `__init__.py`, o que quebrava a descoberta de testes do unittest para qualquer app_label no formato `apps.<nome>`
+
 ## [0.3.0] - 2026-08-21
 
 ### Added

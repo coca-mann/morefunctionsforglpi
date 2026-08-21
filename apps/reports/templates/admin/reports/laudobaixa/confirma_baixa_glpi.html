@@ -1,0 +1,47 @@
+{% extends "admin/base_site.html" %}
+{% load i18n l10n admin_urls %}
+
+{% block content %}
+<p>
+    Você está prestes a aplicar o status ID <strong>{{ status_alvo_id }}</strong> no GLPI
+    para os itens abaixo do laudo <strong>{{ laudo.numero_documento }}</strong>.
+    Itens já processados com sucesso anteriormente não são reenviados.
+</p>
+
+<table>
+    <thead>
+        <tr>
+            <th>Equipamento</th>
+            <th>Tipo</th>
+            <th>Patrimônio</th>
+            <th>Status atual</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in itens %}
+        <tr>
+            <td>{{ item.nome_equipamento }}</td>
+            <td>{{ item.tipo_equipamento }}</td>
+            <td>{{ item.numero_patrimonio|default:"-" }}</td>
+            <td>
+                {{ item.get_status_display }}
+                {% if item.status == 'FALHA' and item.glpi_erro %}
+                    <br><small style="color:#ba2121;">{{ item.glpi_erro }}</small>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<form method="post">
+    {% csrf_token %}
+    {% for obj in queryset %}
+        <input type="hidden" name="{{ action_checkbox_name }}" value="{{ obj.pk|unlocalize }}">
+    {% endfor %}
+    <input type="hidden" name="action" value="atualizar_status_itens_no_glpi">
+    <input type="hidden" name="confirma_baixa_glpi" value="yes">
+    <input type="submit" value="Confirmar baixa no GLPI">
+    <a href="{% url opts|admin_urlname:'changelist' %}" class="button cancel-link">Cancelar</a>
+</form>
+{% endblock %}
