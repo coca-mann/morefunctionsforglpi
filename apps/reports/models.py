@@ -142,6 +142,13 @@ class ItemLaudo(models.Model):
     Um equipamento ("item filho") associado a um Laudo de Baixa.
     Os dados do equipamento são copiados do GLPI.
     """
+
+    STATUS_GLPI_CHOICES = [
+        ('PENDENTE', 'Pendente'),
+        ('PROCESSADO', 'Processado'),
+        ('ERRO', 'Erro'),
+    ]
+
     laudo = models.ForeignKey(
         LaudoBaixa,
         verbose_name="Laudo",
@@ -201,6 +208,30 @@ class ItemLaudo(models.Model):
         null=True,
         blank=True, # Força o usuário a escolher um motivo
         help_text="Selecione o motivo da baixa para este item."
+    )
+
+    # --- Resultado da última tentativa de baixa no GLPI ---
+    status_glpi = models.CharField(
+        "Status no GLPI",
+        max_length=15,
+        choices=STATUS_GLPI_CHOICES,
+        default='PENDENTE',
+        editable=False,
+        help_text="Resultado da última tentativa de aplicar a baixa deste item no GLPI."
+    )
+    data_processamento_glpi = models.DateTimeField(
+        "Data do Processamento",
+        null=True,
+        blank=True,
+        editable=False,
+        help_text="Quando a última tentativa de baixa deste item foi executada."
+    )
+    log_processamento_glpi = models.TextField(
+        "Log de Processamento",
+        null=True,
+        blank=True,
+        editable=False,
+        help_text="Mensagem de sucesso ou erro retornada pelo GLPI na última tentativa."
     )
 
     class Meta:

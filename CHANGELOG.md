@@ -19,6 +19,16 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Security
 
+## [0.3.0] - 2026-08-21
+
+### Added
+
+- [471ae43](https://github.com/coca-mann/morefunctionsforglpi/commit/471ae43) - Laudo de Baixa passa a registrar o status de processamento (pendente/processado/erro) e o log de sucesso ou erro do GLPI para cada item; reexecutar a ação após uma falha parcial reprocessa só os itens ainda pendentes
+
+### Changed
+
+- [092789f](https://github.com/coca-mann/morefunctionsforglpi/commit/092789f) - Remove os templates de login do `django-allauth` (`templates/account/login.html`, `templates/socialaccount/login.html`), órfãos desde a remoção da dependência
+
 ## [0.2.0] - 2026-08-21
 
 ### Added
@@ -46,7 +56,7 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 - [ffa7365](https://github.com/coca-mann/morefunctionsforglpi/commit/ffa7365) - Adiciona guia de arquitetura do projeto (`CLAUDE.md`)
 - [5e6356b](https://github.com/coca-mann/morefunctionsforglpi/commit/5e6356b) - Adiciona infraestrutura de changelog e template de Pull Request (`CHANGELOG.md`, `docs/versioning.md`, `.github/PULL_REQUEST_TEMPLATE.md`)
-- [a923666, a6c0ae1](https://github.com/coca-mann/morefunctionsforglpi/commit/a923666) - Realiza auditoria completa de código e mapeamento de funcionalidades do projeto (relatórios mantidos localmente, não versionados por conterem detalhes sensíveis)
+- [a923666](https://github.com/coca-mann/morefunctionsforglpi/commit/a923666), [a6c0ae1](https://github.com/coca-mann/morefunctionsforglpi/commit/a6c0ae1) - Realiza auditoria completa de código e mapeamento de funcionalidades do projeto (relatórios mantidos localmente, não versionados por conterem detalhes sensíveis)
 - [c430075](https://github.com/coca-mann/morefunctionsforglpi/commit/c430075) - Adiciona `README.md` do projeto
 
 ### Security

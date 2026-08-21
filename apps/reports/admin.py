@@ -2,6 +2,7 @@ from django.contrib import admin, messages
 from django.http import HttpResponseRedirect
 from django.utils import timezone
 from django.utils.safestring import mark_safe
+from django.utils.html import format_html
 from django.urls import reverse
 from django.contrib import admin, messages
 from django.db.models import Count, Q
@@ -80,27 +81,69 @@ class ItemLaudoInline(TabularInline):
     
     # Campos que aparecem no inline
     fields = (
-        'nome_equipamento', 
-        'tipo_equipamento', 
-        'marca_equipamento', 
+        'nome_equipamento',
+        'tipo_equipamento',
+        'marca_equipamento',
         'modelo_equipamento',
-        'numero_patrimonio', 
-        'numero_serie', 
-        'motivo_baixa' # Este é o único campo editável!
+        'numero_patrimonio',
+        'numero_serie',
+        'motivo_baixa', # Este é o único campo editável!
+        'status_badge',
+        'log_button',
     )
-    
+
     # Campos que não podem ser editados pelo usuário no inline
     readonly_fields = (
-        'nome_equipamento', 
-        'tipo_equipamento', 
-        'marca_equipamento', 
+        'nome_equipamento',
+        'tipo_equipamento',
+        'marca_equipamento',
         'modelo_equipamento',
-        'numero_patrimonio', 
-        'numero_serie'
+        'numero_patrimonio',
+        'numero_serie',
+        'status_badge',
+        'log_button',
     )
-    
+
     extra = 0 # Não mostrar formulários em branco por padrão
     can_delete = True # Permitir remover um item importado por engano
+
+    _STATUS_CORES = {
+        'PENDENTE': ('#4b5563', '#f3f4f6'),
+        'PROCESSADO': ('#15803d', '#dcfce7'),
+        'ERRO': ('#b91c1c', '#fee2e2'),
+    }
+
+    @admin.display(description="Status GLPI")
+    def status_badge(self, obj):
+        if not obj.pk:
+            return "-"
+        fg, bg = self._STATUS_CORES.get(obj.status_glpi, self._STATUS_CORES['PENDENTE'])
+        return format_html(
+            '<span style="display:inline-block;padding:2px 8px;border-radius:9999px;'
+            'font-size:11px;font-weight:600;white-space:nowrap;color:{0};background-color:{1};">{2}</span>',
+            fg, bg, obj.get_status_glpi_display()
+        )
+
+    @admin.display(description="Log")
+    def log_button(self, obj):
+        # Só existe log depois de pelo menos uma tentativa de processamento
+        if not obj.pk or not obj.log_processamento_glpi:
+            return "-"
+        modal_id = f"log-modal-{obj.pk}"
+        data_str = (
+            obj.data_processamento_glpi.strftime('%d/%m/%Y %H:%M')
+            if obj.data_processamento_glpi else ''
+        )
+        return format_html(
+            '<button type="button" class="button" '
+            'onclick="document.getElementById(\'{0}\').showModal()">Ver log</button>'
+            '<dialog id="{0}" style="max-width:480px;padding:16px;border-radius:8px;border:1px solid #d1d5db;">'
+            '<p style="white-space:pre-wrap;word-break:break-word;margin:0 0 8px 0;">{1}</p>'
+            '<p style="color:#6b7280;font-size:11px;margin:0 0 12px 0;">{2}</p>'
+            '<form method="dialog"><button type="submit" class="button">Fechar</button></form>'
+            '</dialog>',
+            modal_id, obj.log_processamento_glpi, data_str
+        )
 
     def has_add_permission(self, request, obj):
         # Impede que o usuário adicione itens manualmente por este inline
@@ -351,6 +394,17 @@ class LaudoBaixaAdmin(ModelAdmin):
             )
             return
 
+        # 1b. Itens já confirmados como PROCESSADO em uma tentativa anterior não são reenviados
+        itens_a_processar = itens.exclude(status_glpi='PROCESSADO')
+        itens_pulados = itens.count() - itens_a_processar.count()
+
+        if not itens_a_processar.exists():
+            self.message_user(request,
+                "Todos os itens deste laudo já foram processados com sucesso em uma tentativa anterior.",
+                messages.WARNING
+            )
+            return
+
         # 2. Busca configuração e valida ID do status
         config = GLPIConfig.objects.first()
         if not config or not config.glpi_status_baixa_id:
@@ -372,47 +426,61 @@ class LaudoBaixaAdmin(ModelAdmin):
             if error:
                 raise Exception(f"Falha ao iniciar sessão: {error}")
 
-            # 4. Loop de atualização
-            for item in itens:
+            # 4. Loop de atualização (só nos itens ainda não confirmados)
+            for item in itens_a_processar:
                 # Mapeia o tipo amigável (ex: Computador) para o itemtype do GLPI (ex: Computer)
                 itemtype = map_django_type_to_glpi(item.tipo_equipamento)
-                
+
                 ok, error_msg = update_glpi_asset_status(
-                    config, 
-                    session_token, 
-                    itemtype, 
-                    item.glpi_id, 
+                    config,
+                    session_token,
+                    itemtype,
+                    item.glpi_id,
                     config.glpi_status_baixa_id
                 )
-                
+
+                item.data_processamento_glpi = timezone.now()
                 if ok:
                     sucesso_count += 1
+                    item.status_glpi = 'PROCESSADO'
+                    item.log_processamento_glpi = (
+                        f"Atualizado com sucesso para o status ID {config.glpi_status_baixa_id} "
+                        f"em {item.data_processamento_glpi:%d/%m/%Y %H:%M}."
+                    )
                 else:
                     erro_count += 1
+                    item.status_glpi = 'ERRO'
+                    item.log_processamento_glpi = error_msg
                     # Log amigável no console do servidor para debug
                     print(f"Erro ao atualizar item {item.glpi_id} ({itemtype}): {error_msg}")
 
+                item.save(update_fields=['status_glpi', 'data_processamento_glpi', 'log_processamento_glpi'])
+
             # 5. Feedback final e trava do laudo
-            if erro_count == 0:
-                # Só marca como PROCESSADO (travando o laudo) se TODOS os itens
-                # foram atualizados com sucesso; falhas parciais deixam o laudo
-                # em RASCUNHO para que a ação possa ser executada novamente.
+            # Só marca como PROCESSADO (travando o laudo) se TODOS os itens do laudo
+            # -- desta rodada ou de tentativas anteriores -- estiverem confirmados;
+            # falhas parciais deixam o laudo em RASCUNHO para uma nova tentativa,
+            # que reenvia só quem ainda não foi confirmado.
+            if not itens.exclude(status_glpi='PROCESSADO').exists():
                 laudo.status = 'PROCESSADO'
                 laudo.data_baixa_glpi = timezone.now()
                 laudo.save(update_fields=['status', 'data_baixa_glpi'])
 
-                self.message_user(
-                    request,
-                    f"Sucesso! Todos os {sucesso_count} itens do laudo {laudo.numero_documento} foram atualizados no GLPI para o status ID {config.glpi_status_baixa_id}. O laudo foi marcado como PROCESSADO.",
-                    messages.SUCCESS
+                msg = (
+                    f"Sucesso! Todos os itens do laudo {laudo.numero_documento} foram atualizados no GLPI "
+                    f"para o status ID {config.glpi_status_baixa_id}. O laudo foi marcado como PROCESSADO."
                 )
+                if itens_pulados:
+                    msg += f" ({itens_pulados} já estavam confirmados de uma tentativa anterior.)"
+                self.message_user(request, msg, messages.SUCCESS)
             else:
-                self.message_user(
-                    request,
-                    f"Atualização concluída com avisos: {sucesso_count} itens atualizados e {erro_count} falhas. "
-                    f"O laudo permanece em RASCUNHO para nova tentativa. Verifique os logs do servidor para detalhes.",
-                    messages.WARNING
+                msg = (
+                    f"Atualização concluída com avisos: {sucesso_count} itens atualizados e {erro_count} falhas nesta tentativa. "
+                    f"O laudo permanece em RASCUNHO. Veja o log de cada item na lista de itens abaixo."
                 )
+                if itens_pulados:
+                    msg += f" ({itens_pulados} itens pulados por já estarem confirmados.)"
+                self.message_user(request, msg, messages.WARNING)
 
         except Exception as e:
             self.message_user(request, f"Erro crítico durante a integração: {e}", messages.ERROR)
