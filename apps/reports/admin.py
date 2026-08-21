@@ -109,21 +109,23 @@ class ItemLaudoInline(TabularInline):
     extra = 0 # Não mostrar formulários em branco por padrão
     can_delete = True # Permitir remover um item importado por engano
 
-    _STATUS_CORES = {
-        'PENDENTE': ('#4b5563', '#f3f4f6'),
-        'PROCESSADO': ('#15803d', '#dcfce7'),
-        'FALHA': ('#b91c1c', '#fee2e2'),
+    class Media:
+        css = {'all': ('reports/css/laudo_baixa_admin.css',)}
+
+    _STATUS_MODIFICADOR = {
+        'PENDENTE': 'lb-badge--pendente',
+        'PROCESSADO': 'lb-badge--processado',
+        'FALHA': 'lb-badge--falha',
     }
 
     @admin.display(description="Status GLPI")
     def status_badge(self, obj):
         if not obj.pk:
             return "-"
-        fg, bg = self._STATUS_CORES.get(obj.status, self._STATUS_CORES['PENDENTE'])
+        modificador = self._STATUS_MODIFICADOR.get(obj.status, 'lb-badge--pendente')
         return format_html(
-            '<span style="display:inline-block;padding:2px 8px;border-radius:9999px;'
-            'font-size:11px;font-weight:600;white-space:nowrap;color:{0};background-color:{1};">{2}</span>',
-            fg, bg, obj.get_status_display()
+            '<span class="lb-badge {0}">{1}</span>',
+            modificador, obj.get_status_display()
         )
 
     @admin.display(description="Log")
@@ -138,12 +140,13 @@ class ItemLaudoInline(TabularInline):
         )
         texto = obj.glpi_erro or f"Atualizado com sucesso em {data_str}."
         return format_html(
-            '<button type="button" class="button" '
+            '<button type="button" class="lb-btn" '
             'onclick="document.getElementById(\'{0}\').showModal()">Ver log</button>'
-            '<dialog id="{0}" style="max-width:480px;padding:16px;border-radius:8px;border:1px solid #d1d5db;">'
-            '<p style="white-space:pre-wrap;word-break:break-word;margin:0 0 8px 0;">{1}</p>'
-            '<p style="color:#6b7280;font-size:11px;margin:0 0 12px 0;">{2}</p>'
-            '<form method="dialog"><button type="submit" class="button">Fechar</button></form>'
+            '<dialog id="{0}" class="lb-dialog">'
+            '<p class="lb-dialog__message">{1}</p>'
+            '<p class="lb-dialog__meta">{2}</p>'
+            '<button type="button" class="lb-btn" '
+            'onclick="this.closest(\'dialog\').close()">Fechar</button>'
             '</dialog>',
             modal_id, texto, data_str
         )

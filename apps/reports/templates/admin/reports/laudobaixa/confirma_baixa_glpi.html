@@ -1,14 +1,19 @@
 {% extends "admin/base_site.html" %}
-{% load i18n l10n admin_urls %}
+{% load i18n l10n admin_urls static %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'reports/css/laudo_baixa_admin.css' %}">
+{% endblock %}
 
 {% block content %}
-<p>
+<p class="lb-confirm-intro">
     Você está prestes a aplicar o status ID <strong>{{ status_alvo_id }}</strong> no GLPI
     para os itens abaixo do laudo <strong>{{ laudo.numero_documento }}</strong>.
     Itens já processados com sucesso anteriormente não são reenviados.
 </p>
 
-<table>
+<table class="lb-table">
     <thead>
         <tr>
             <th>Equipamento</th>
@@ -26,7 +31,7 @@
             <td>
                 {{ item.get_status_display }}
                 {% if item.status == 'FALHA' and item.glpi_erro %}
-                    <br><small style="color:#ba2121;">{{ item.glpi_erro }}</small>
+                    <small class="lb-error-detail">{{ item.glpi_erro }}</small>
                 {% endif %}
             </td>
         </tr>
@@ -41,7 +46,9 @@
     {% endfor %}
     <input type="hidden" name="action" value="atualizar_status_itens_no_glpi">
     <input type="hidden" name="confirma_baixa_glpi" value="yes">
-    <input type="submit" value="Confirmar baixa no GLPI">
-    <a href="{% url opts|admin_urlname:'changelist' %}" class="button cancel-link">Cancelar</a>
+    <div class="lb-confirm-actions">
+        <button type="submit" class="lb-btn lb-btn--primary">Confirmar baixa no GLPI</button>
+        <a href="{% url opts|admin_urlname:'changelist' %}" class="lb-btn">Cancelar</a>
+    </div>
 </form>
 {% endblock %}
