@@ -31,7 +31,10 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 DB_ENCRYPTION_KEY = os.getenv('DB_ENCRYPTION_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG')
+# os.getenv() sempre retorna string; qualquer string não-vazia (inclusive a
+# literal 'False') é truthy em Python, então DEBUG precisa ser comparado
+# explicitamente contra os valores que significam "ligado".
+DEBUG = os.getenv('DEBUG', 'False').strip().lower() in ('true', '1', 'yes', 'on')
 
 ALLOWED_HOSTS = ['*']
 
