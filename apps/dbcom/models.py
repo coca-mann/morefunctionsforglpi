@@ -157,8 +157,8 @@ class GLPIWebhook(models.Model):
         help_text="Nome descritivo (ex: Automação de Chamados de TI)."
     )
     secret_key = models.CharField(
-        max_length=100, 
-        help_text="Segredo do Webhook (definido no GLPI) para validação (atualmente ignorado).",
+        max_length=100,
+        help_text="Segredo do Webhook (definido no GLPI) usado para validar a assinatura HMAC de cada chamada. Obrigatório: sem ele, o endpoint recusa a chamada.",
         blank=True
     )
     
