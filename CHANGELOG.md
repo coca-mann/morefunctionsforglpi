@@ -13,11 +13,18 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Added
 
+- [e7731ad, e1f9282, f1e88a5, aa2a1b0, 5ffa809, 3ce5c6b, d26e8d3, 28b2463](https://github.com/coca-mann/morefunctionsforglpi/commit/e7731ad) - Substitui o tema padrão do Django admin pelo `django-unfold`: sidebar reorganizado por seção com ícones, dashboard e as telas com customização própria (impressão de etiquetas, editor de layout de etiqueta, configuração de servidor de impressão, configuração de banco externo) adaptadas para o novo tema, incluindo widgets nativos de senha e dropdown
+
 ### Changed
+
+- [fbcca79, d4590d6](https://github.com/coca-mann/morefunctionsforglpi/commit/fbcca79) - Atualiza Django (6.0.1 → 6.1) e Django REST Framework (3.16.1 → 3.18.0); remove a dependência `django-allauth`, que não era utilizada em nenhum lugar do código
 
 ### Fixed
 
 ### Security
+
+- [32beb93, a673c0a](https://github.com/coca-mann/morefunctionsforglpi/commit/32beb93) - Sidebar e a página de índice do app de laudos (`/admin/reports/`) passam a respeitar as permissões granulares do Django em vez de aparecer pra qualquer usuário staff
+- [7582bca](https://github.com/coca-mann/morefunctionsforglpi/commit/7582bca) - Corrige a ordem dos middlewares que impedia a remoção efetiva do header `X-Frame-Options`, quebrando o embed do admin no iframe do GLPI
 
 ## [0.1.1] - 2026-08-20
 

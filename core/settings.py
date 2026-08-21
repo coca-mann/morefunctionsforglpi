@@ -14,6 +14,8 @@ import os
 from dotenv import load_dotenv
 from pathlib import Path
 from datetime import timedelta
+from django.urls import reverse_lazy
+from django.utils.translation import gettext_lazy as _
 
 load_dotenv()
 
@@ -48,6 +50,7 @@ CSP_FRAME_ANCESTORS = os.getenv('CSP_FRAME_ANCESTORS', "'self'")
 
 INSTALLED_APPS = [
     'daphne',
+    'unfold',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -93,8 +96,15 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # AllowAdminInIframeMiddleware precisa vir ANTES do XFrameOptionsMiddleware
+    # nesta lista: o processamento da resposta acontece na ordem inversa da
+    # lista, então assim o XFrameOptionsMiddleware roda primeiro (define
+    # X-Frame-Options: DENY por padrão) e este middleware roda depois,
+    # removendo o header por último. Na ordem antiga, o X-Frame-Options
+    # removido aqui era recolocado pelo XFrameOptionsMiddleware logo em
+    # seguida, quebrando o embed do admin no iframe do GLPI.
     'apps.glpiintegrator.middleware.AllowAdminInIframeMiddleware', # Habilitado para permitir iframe do GLPI
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
 ROOT_URLCONF = 'core.urls'
@@ -244,3 +254,144 @@ SESSION_COOKIE_SAMESITE = 'None'
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SAMESITE = 'None'
 CSRF_COOKIE_SECURE = True
+
+# Tema do Django Admin (django-unfold)
+UNFOLD = {
+    "SITE_TITLE": "MoreFunctionsForGLPI",
+    "SITE_HEADER": "Mais Funções do GLPI",
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": False,
+        "navigation": [
+            {
+                "title": _("Início"),
+                "separator": False,
+                "items": [
+                    {
+                        "title": _("Dashboard"),
+                        "icon": "dashboard",
+                        "link": reverse_lazy("admin:index"),
+                    },
+                ],
+            },
+            {
+                "title": _("Integração GLPI"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Conexões de Banco"),
+                        "icon": "database",
+                        "link": reverse_lazy("admin:dbcom_externaldbconfig_changelist"),
+                        "permission": lambda request: request.user.has_perm("dbcom.view_externaldbconfig"),
+                    },
+                    {
+                        "title": _("Configuração da API GLPI"),
+                        "icon": "settings",
+                        "link": reverse_lazy("admin:dbcom_glpiconfig_changelist"),
+                        "permission": lambda request: request.user.has_perm("dbcom.view_glpiconfig"),
+                    },
+                    {
+                        "title": _("Webhooks e Automação"),
+                        "icon": "webhook",
+                        "link": reverse_lazy("admin:dbcom_glpiwebhook_changelist"),
+                        "permission": lambda request: request.user.has_perm("dbcom.view_glpiwebhook"),
+                    },
+                ],
+            },
+            {
+                "title": _("Painel NOC"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Configurações do Dashboard"),
+                        "icon": "tune",
+                        "link": reverse_lazy("admin:panel_dashboardsettings_changelist"),
+                        "permission": lambda request: request.user.has_perm("panel.view_dashboardsettings"),
+                    },
+                    {
+                        "title": _("Displays Conectados"),
+                        "icon": "desktop_windows",
+                        "link": reverse_lazy("admin:panel_display_changelist"),
+                        "permission": lambda request: request.user.has_perm("panel.view_display"),
+                    },
+                ],
+            },
+            {
+                "title": _("Impressão de Etiquetas"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Imprimir Etiquetas"),
+                        "icon": "qr_code_2",
+                        "link": reverse_lazy("admin_impressao_etiquetas"),
+                    },
+                    {
+                        "title": _("Servidores de Impressão"),
+                        "icon": "print",
+                        "link": reverse_lazy("admin:printer_printserver_changelist"),
+                        "permission": lambda request: request.user.has_perm("printer.view_printserver"),
+                    },
+                    {
+                        "title": _("Layouts de Etiqueta"),
+                        "icon": "label",
+                        "link": reverse_lazy("admin:printer_etiquetalayout_changelist"),
+                        "permission": lambda request: request.user.has_perm("printer.view_etiquetalayout"),
+                    },
+                ],
+            },
+            {
+                "title": _("Laudos e Protocolos"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Laudos de Baixa"),
+                        "icon": "inventory_2",
+                        "link": reverse_lazy("admin:reports_laudobaixa_changelist"),
+                        "permission": lambda request: request.user.has_perm("reports.view_laudobaixa"),
+                    },
+                    {
+                        "title": _("Motivos de Baixa"),
+                        "icon": "list_alt",
+                        "link": reverse_lazy("admin:reports_motivobaixa_changelist"),
+                        "permission": lambda request: request.user.has_perm("reports.view_motivobaixa"),
+                    },
+                    {
+                        "title": _("Protocolos de Reparo"),
+                        "icon": "handyman",
+                        "link": reverse_lazy("admin:reports_protocoloreparo_changelist"),
+                        "permission": lambda request: request.user.has_perm("reports.view_protocoloreparo"),
+                    },
+                    {
+                        "title": _("Cabeçalho dos Documentos"),
+                        "icon": "description",
+                        "link": reverse_lazy("admin:reports_configuracaocabecalho_changelist"),
+                        "permission": lambda request: request.user.has_perm("reports.view_configuracaocabecalho"),
+                    },
+                ],
+            },
+            {
+                "title": _("Administração"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Usuários"),
+                        "icon": "person",
+                        "link": reverse_lazy("admin:auth_user_changelist"),
+                        "permission": lambda request: request.user.has_perm("auth.view_user"),
+                    },
+                    {
+                        "title": _("Grupos"),
+                        "icon": "group",
+                        "link": reverse_lazy("admin:auth_group_changelist"),
+                        "permission": lambda request: request.user.has_perm("auth.view_group"),
+                    },
+                ],
+            },
+        ],
+    },
+}

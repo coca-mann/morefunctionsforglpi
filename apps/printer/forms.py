@@ -1,16 +1,17 @@
 from django import forms
+from unfold.widgets import UnfoldAdminPasswordToggleWidget
 from .models import PrintServer
 
 class PrintServerAdminForm(forms.ModelForm):
     """
     Formulário customizado para o Admin do PrintServer.
     """
-    
+
     # 1. Este é o campo que o admin verá.
     # É um campo de senha, não obrigatório, e não renderiza o valor.
     api_key_input = forms.CharField(
         label="Chave de API",
-        widget=forms.PasswordInput(render_value=False),
+        widget=UnfoldAdminPasswordToggleWidget(render_value=False),
         required=False,
         help_text="Deixe em branco para não alterar a chave existente."
     )

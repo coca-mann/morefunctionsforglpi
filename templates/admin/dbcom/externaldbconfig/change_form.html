@@ -1,32 +1,82 @@
 {% extends "admin/change_form.html" %}
 {% load i18n admin_urls %}
 
-{# Bloco para adicionar o resultado do teste #}
-{% block content %}
-    {{ block.super }} {# Renderiza o formulário padrão #}
-
-    {# Div para mostrar o resultado do teste #}
-    <div id="test-connection-result" style="
-        margin: 10px 0;
-        padding: 12px;
-        border-radius: 4px;
-        display: none; /* Começa escondido */
-        font-weight: bold;
-        font-size: 14px;
-        border-width: 1px;
-        border-style: solid;
-    "></div>
+{# Paleta própria do teste de conexão: variáveis do tema clássico do admin
+   não existem mais no Unfold, então a página define as suas, reagindo ao
+   dark mode via a classe "dark" no <html> e usando a cor primária do
+   tema (UNFOLD["COLORS"]["primary"] no settings.py) pro botão. #}
+{% block extrastyle %}
+    {{ block.super }}
+    <style>
+        :root {
+            --edc-btn-bg: #e5e7eb;
+            --edc-btn-border: #9ca3af;
+            --edc-accent: var(--color-primary-500);
+            --edc-success-bg: #dcfce7;
+            --edc-success-fg: #16a34a;
+            --edc-error-bg: #fee2e2;
+            --edc-error-fg: #dc2626;
+        }
+        html.dark {
+            --edc-btn-bg: #3f4a5c;
+            --edc-btn-border: #6b7280;
+            --edc-accent: var(--color-primary-500);
+            --edc-success-bg: rgba(22, 163, 74, 0.15);
+            --edc-success-fg: #4ade80;
+            --edc-error-bg: rgba(220, 38, 38, 0.15);
+            --edc-error-fg: #f87171;
+        }
+        .edc-test-row {
+            margin: 16px 0;
+        }
+        #test-connection-btn {
+            display: inline-block;
+            padding: 8px 14px;
+            border-radius: 6px;
+            border: 2px solid var(--edc-btn-border);
+            background: var(--edc-btn-bg);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: border-color 0.15s ease;
+        }
+        #test-connection-btn:hover {
+            border-color: var(--edc-accent);
+        }
+        #test-connection-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        #test-connection-result {
+            margin: 10px 0;
+            padding: 12px;
+            border-radius: 6px;
+            display: none;
+            font-weight: bold;
+            font-size: 14px;
+            border: 1px solid transparent;
+        }
+        #test-connection-result.success {
+            background-color: var(--edc-success-bg);
+            border-color: var(--edc-success-fg);
+            color: var(--edc-success-fg);
+        }
+        #test-connection-result.error {
+            background-color: var(--edc-error-bg);
+            border-color: var(--edc-error-fg);
+            color: var(--edc-error-fg);
+        }
+    </style>
 {% endblock %}
 
-
-{# Bloco para adicionar o botão antes dos botões de salvar #}
-{% block submit_buttons_bottom %}
-    <div class="submit-row">
-        <button type="button" id="test-connection-btn" class="button">Testar Conexão</button>
-    </div>
-    
-    {# Renderiza os botões de salvar padrões (Salvar, Salvar e continuar, etc.) #}
+{# Botão de teste e resultado logo após os campos do model, não lá embaixo perto do Salvar #}
+{% block after_field_sets %}
     {{ block.super }}
+
+    <div class="edc-test-row">
+        <button type="button" id="test-connection-btn">Testar Conexão</button>
+    </div>
+    <div id="test-connection-result"></div>
 {% endblock %}
 
 
@@ -75,14 +125,10 @@
             // 4. Lidar com o sucesso
             success: function(response) {
                 $resultDiv.text(response.message);
-                $resultDiv.css({
-                    'background-color': '#dff0d8',
-                    'border-color': '#d6e9c6',
-                    'color': '#3c763d'
-                });
+                $resultDiv.removeClass('error').addClass('success');
                 $resultDiv.show();
             },
-            
+
             // 5. Lidar com o erro
             error: function(xhr) {
                 var message = 'Erro desconhecido.';
@@ -90,11 +136,7 @@
                     message = xhr.responseJSON.message;
                 }
                 $resultDiv.text(message);
-                $resultDiv.css({
-                    'background-color': '#f2dede',
-                    'border-color': '#ebccd1',
-                    'color': '#a94442'
-                });
+                $resultDiv.removeClass('success').addClass('error');
                 $resultDiv.show();
             },
             

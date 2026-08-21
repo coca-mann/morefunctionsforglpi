@@ -1,9 +1,10 @@
 from django.contrib import admin
 from django.shortcuts import redirect
+from unfold.admin import ModelAdmin
 from .models import DashboardSettings, Display
 
 @admin.register(DashboardSettings)
-class DashboardSettingsAdmin(admin.ModelAdmin):
+class DashboardSettingsAdmin(ModelAdmin):
     def has_add_permission(self, request):
         return False if self.model.objects.exists() else True
 
@@ -14,7 +15,7 @@ class DashboardSettingsAdmin(admin.ModelAdmin):
         return redirect('admin:panel_dashboardsettings_add')
 
 @admin.register(Display)
-class DisplayAdmin(admin.ModelAdmin):
+class DisplayAdmin(ModelAdmin):
     list_display = ('name', 'current_screen', 'connected_at', 'last_seen')
     list_filter = ('current_screen', 'connected_at')
     search_fields = ('name',)
