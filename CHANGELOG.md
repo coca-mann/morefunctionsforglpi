@@ -19,6 +19,10 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Security
 
+## [0.5.1] - 2026-08-21
+
+### Security
+
 - [674760d](https://github.com/coca-mann/morefunctionsforglpi/commit/674760d) - Corrige o parsing de `DEBUG`: qualquer valor não vazio (inclusive a string `'False'`) era tratado como `True`, então `DEBUG` podia continuar ativo em produção mesmo com a variável de ambiente configurada para desligá-lo
 - [ee71076](https://github.com/coca-mann/morefunctionsforglpi/commit/ee71076) - Superusuário padrão criado no postinstall passa a ter senha aleatória por instalação em vez da senha fixa `password`, que deixava qualquer instalação esquecida acessível indefinidamente com a mesma credencial
 - [3e97456](https://github.com/coca-mann/morefunctionsforglpi/commit/3e97456) - Corrige dois problemas no login via SSO do GLPI: o parâmetro `next` (fora do payload assinado) permitia redirecionar a vítima para qualquer URL após o login, e a busca de usuário por e-mail podia logar a pessoa numa conta local já existente sem checar posse do e-mail; identidade agora é resolvida só por `glpi_id`, e o redirect é validado contra o host atual
