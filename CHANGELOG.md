@@ -17,6 +17,12 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Fixed
 
+### Security
+
+## [0.5.2] - 2026-08-21
+
+### Fixed
+
 - [74fa6aa](https://github.com/coca-mann/morefunctionsforglpi/commit/74fa6aa) - WebSocket do painel não derruba mais a conexão inteira quando uma mensagem recebida causa um erro inesperado (ex.: banco ou Redis fora do ar); agora loga o erro e mantém a conexão viva
 
 ### Security
